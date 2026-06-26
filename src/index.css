@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-bg-light: #f8fafc;
+  --color-surface-light: #ffffff;
+  --color-bg-dark: #0f172a;
+  --color-surface-dark: #1e293b;
+  --color-accent-good: #22c55e;
+  --color-accent-good-light: #4ade80;
+  --color-accent-bad: #ef4444;
+  --color-accent-bad-light: #f87171;
+  --color-accent-warn: #f59e0b;
+  --color-accent-warn-light: #fbbf24;
+  --color-accent-info: #3b82f6;
+  --color-accent-info-light: #60a5fa;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.1) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

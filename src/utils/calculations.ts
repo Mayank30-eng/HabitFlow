@@ -1,5 +1,5 @@
 import type { Habit } from '../types';
-import { getToday, subDays, addDays, getDaysInRange, parseDate, getHabitRecord } from './helpers';
+import { getToday, subDays, addDays, getDaysInRange, parseDate, getHabitRecord, formatDate } from './helpers';
 
 export const calculateStreak = (habit: Habit): number => {
   const today = getToday();
@@ -260,8 +260,4 @@ export const getHabitImpactScore = (habit: Habit, allHabits: Habit[]): number =>
   const longestBonus = Math.min(longest / 30, 1);
   const impact = (rate * 0.4 + consistency * 100 * 0.3 + streakBonus * 100 * 0.15 + longestBonus * 100 * 0.15) / 100;
   return Math.round(impact * 100);
-};
-
-export const formatDate = (d: Date): string => {
-  return d.toISOString().split('T')[0];
 };

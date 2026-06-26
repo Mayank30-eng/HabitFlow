@@ -14,7 +14,7 @@ import {
   calculateStreak, calculateLongestStreak, calculateCompletionRate,
   calculateTotalCompletions, getHabitImpactScore, getCompletionTrend
 } from '../utils/calculations';
-import { getHabitRecord, getToday, getDaysInRange } from '../utils/helpers';
+import { getHabitRecord, getToday, getDaysInRange, formatDate } from '../utils/helpers';
 import type { HabitFormData } from '../types';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart
@@ -44,8 +44,8 @@ const HabitDetails: React.FC = () => {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       const monthName = d.toLocaleString('default', { month: 'short' });
-      const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
-      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+      const start = formatDate(new Date(d.getFullYear(), d.getMonth(), 1));
+      const end = formatDate(new Date(d.getFullYear(), d.getMonth() + 1, 0));
       const range = getDaysInRange(start, end);
       const completed = range.filter((date) => {
         const record = getHabitRecord(habit, date);
@@ -297,7 +297,7 @@ const HabitDetails: React.FC = () => {
             }
             const current = new Date(start);
             while (current <= end) {
-              const dateStr = current.toISOString().split('T')[0];
+              const dateStr = formatDate(current);
               const record = getHabitRecord(habit, dateStr);
               const completed = record && record.completed;
               days.push(

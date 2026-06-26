@@ -17,7 +17,7 @@ import {
   calculateStreak, calculateLongestStreak, calculateOverallSuccessRate,
   calculateDailyCompletionRate, calculateGrowthScore, getOverallStatus, getGoodVsBadStats
 } from '../utils/calculations';
-import { getToday, categories } from '../utils/helpers';
+import { getToday, categories, formatDate } from '../utils/helpers';
 import type { HabitFormData } from '../types';
 
 const categoryIconMap: Record<string, React.ElementType> = {
@@ -76,7 +76,7 @@ const Dashboard: React.FC = () => {
     for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = formatDate(date);
       const dayHabits = habits.filter((h) => h.history.some((r) => r.date === dateStr && r.completed));
       if (dayHabits.length > 0) {
         activity.push({ date: dateStr, habits: dayHabits });

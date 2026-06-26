@@ -1,5 +1,5 @@
 import type { Habit } from '../types';
-import { generateId, getToday, subDays } from '../utils/helpers';
+import { generateId, getToday, subDays, addDays, getDaysInRange } from '../utils/helpers';
 
 const createDemoHabits = (): Habit[] => {
   const today = getToday();
@@ -104,15 +104,7 @@ const createDemoHabits = (): Habit[] => {
 
   // Generate realistic history for each habit
   habits.forEach((habit) => {
-    const range = [];
-    let current = habit.startDate;
-    while (current <= today) {
-      range.push(current);
-      // Add days using helper
-      const d = new Date(current + 'T00:00:00');
-      d.setDate(d.getDate() + 1);
-      current = d.toISOString().split('T')[0];
-    }
+    const range = getDaysInRange(habit.startDate, today);
 
     const baseRate = habit.type === 'good' ? 0.75 : 0.3;
     habit.history = range.map((date) => {

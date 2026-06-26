@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useHabits } from '../contexts/HabitContext';
 import { useToast } from '../contexts/ToastContext';
 import { exportData, importData } from '../utils/storage';
+import { formatDate } from '../utils/helpers';
 import ConfirmModal from '../components/modals/ConfirmModal';
 
 const Settings: React.FC = () => {
@@ -21,7 +22,7 @@ const Settings: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `habit-tracker-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `habit-tracker-export-${formatDate(new Date())}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('Data exported successfully', 'success');

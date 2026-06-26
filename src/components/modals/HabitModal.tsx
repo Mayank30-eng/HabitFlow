@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
-import { categories } from '../../utils/helpers';
+import { categories, formatDate } from '../../utils/helpers';
 import type { HabitFormData } from '../../types';
 import { Check } from 'lucide-react';
 
@@ -19,7 +19,7 @@ const defaultForm: HabitFormData = {
   description: '',
   frequency: 'daily',
   customDays: [],
-  startDate: new Date().toISOString().split('T')[0],
+  startDate: formatDate(new Date()),
 };
 
 const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, initialData, title }) => {

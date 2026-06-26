@@ -31,9 +31,9 @@ const Sidebar: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
               key={item.path}
               to={item.path}
               onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border-l-2 border-green-500'
+                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white'
                   : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >

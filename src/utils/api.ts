@@ -1,7 +1,20 @@
-import type { Habit, HabitFormData, PersistedAppState, UserSettings } from '../types';
+import type { AuthUser, Habit, HabitFormData, PersistedAppState, UserSettings } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const USER_KEY = import.meta.env.VITE_USER_ID || 'default-user';
+export const TOKEN_KEY = 'habit-tracker-auth-token';
+
+export const getToken = (): string | null => {
+  return localStorage.getItem(TOKEN_KEY);
+};
+
+export const setToken = (token: string): void => {
+  localStorage.setItem(TOKEN_KEY, token);
+};
+
+export const removeToken = (): void => {
+  localStorage.removeItem(TOKEN_KEY);
+};
 
 export class ApiError extends Error {
   status: number;
@@ -16,6 +29,11 @@ export class ApiError extends Error {
 const request = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
   const headers = new Headers(options.headers);
   headers.set('X-User-Id', USER_KEY);
+
+  const token = getToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
   if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -37,6 +55,10 @@ const request = async <T>(path: string, options: RequestInit = {}): Promise<T> =
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      removeToken();
+      window.dispatchEvent(new Event('auth:unauthorized'));
+    }
     const message = typeof payload === 'object' && payload && 'message' in payload
       ? String((payload as { message: unknown }).message)
       : 'Unable to save your changes. Please try again.';
@@ -44,6 +66,27 @@ const request = async <T>(path: string, options: RequestInit = {}): Promise<T> =
   }
 
   return payload as T;
+};
+
+export const authApi = {
+  login: (data: { email: string; password: string }) =>
+    request<{ token: string; user: AuthUser }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  register: (data: { name: string; email: string; password: string }) =>
+    request<{ token: string; user: AuthUser }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getMe: () => request<{ user: AuthUser }>('/auth/me'),
+
+  logout: () =>
+    request<{ message: string }>('/auth/logout', {
+      method: 'POST',
+    }),
 };
 
 export const api = {
@@ -89,3 +132,4 @@ export const api = {
     body: JSON.stringify(settings),
   }),
 };
+

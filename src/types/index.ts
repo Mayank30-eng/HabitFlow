@@ -47,6 +47,12 @@ export interface UserSettings {
   theme: 'light' | 'dark';
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface PersistedAppState {
   user?: {
     id: string;
@@ -57,3 +63,4 @@ export interface PersistedAppState {
   settings: UserSettings;
   analytics?: unknown;
 }
+

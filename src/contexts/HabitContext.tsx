@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
 import type { Habit, HabitFormData, FilterState, PersistedAppState, UserSettings } from '../types';
 import { getToday, getHabitRecord } from '../utils/helpers';
-import { api } from '../utils/api';
+import { api, getToken } from '../utils/api';
 import {
   clearLegacyHabits,
   hasCompletedMongoMigration,
@@ -105,6 +105,10 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const loadState = useCallback(async () => {
+    if (!getToken()) {
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return;
+    }
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       let appState = await api.getState();
@@ -132,6 +136,23 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     void loadState();
+
+    const handleLogin = () => {
+      void loadState();
+    };
+
+    const handleUnauthorized = () => {
+      dispatch({ type: 'SET_APP_STATE', payload: { habits: [], settings: { theme: 'light' } } });
+      dispatch({ type: 'SET_LOADING', payload: false });
+    };
+
+    window.addEventListener('auth:login', handleLogin);
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
+    return () => {
+      window.removeEventListener('auth:login', handleLogin);
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
   }, [loadState]);
 
   const persist = useCallback(async (operation: () => Promise<{ state: PersistedAppState }>) => {

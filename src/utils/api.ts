@@ -9,10 +9,12 @@ export const getToken = (): string | null => {
 
 export const setToken = (token: string): void => {
   localStorage.setItem(TOKEN_KEY, token);
+  window.dispatchEvent(new Event('auth:login'));
 };
 
 export const removeToken = (): void => {
   localStorage.removeItem(TOKEN_KEY);
+  window.dispatchEvent(new Event('auth:unauthorized'));
 };
 
 export class ApiError extends Error {
@@ -55,7 +57,6 @@ const request = async <T>(path: string, options: RequestInit = {}): Promise<T> =
   if (!response.ok) {
     if (response.status === 401) {
       removeToken();
-      window.dispatchEvent(new Event('auth:unauthorized'));
     }
     const message = typeof payload === 'object' && payload && 'message' in payload
       ? String((payload as { message: unknown }).message)

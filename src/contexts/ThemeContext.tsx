@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { api } from '../utils/api';
+import { api, getToken } from '../utils/api';
 
 type Theme = 'light' | 'dark';
 
@@ -23,6 +23,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     let active = true;
+    if (!getToken()) return;
+
     api.getSettings()
       .then((settings) => {
         if (active) setTheme(settings.theme);

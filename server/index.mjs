@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 import authRoutes from './routes/auth.js';
+import { createProtectOrLegacy } from './middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -167,6 +168,9 @@ const getUser = async (req) => {
     { new: true, upsert: true }
   );
 };
+
+// Dual-auth middleware: JWT preferred, legacy X-User-Id fallback
+const protectOrLegacy = createProtectOrLegacy(getUser);
 
 const ensureSettings = async (userId) => {
   return Settings.findOneAndUpdate(
@@ -526,21 +530,21 @@ if (!process.env.JWT_SECRET) {
 // Auth routes (require DB)
 app.use('/api/auth', requireDb, authRoutes);
 
-app.use('/api', requireDb);
+app.use('/api', requireDb, protectOrLegacy);
 
 app.get('/api/state', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   res.json(await buildState(user));
 }));
 
 app.get('/api/settings', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   const settings = await ensureSettings(user._id);
   res.json({ theme: settings.theme });
 }));
 
 app.put('/api/settings', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   const theme = req.body?.theme;
   if (!['light', 'dark'].includes(theme)) {
     res.status(400).json({ error: 'Validation failed', message: 'Theme must be light or dark.' });
@@ -551,7 +555,7 @@ app.put('/api/settings', asyncHandler(async (req, res) => {
 }));
 
 app.post('/api/habits', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   const validation = validateHabitInput(req.body);
   if (!validation.valid) {
     res.status(400).json({ error: 'Validation failed', message: validation.errors.join(' ') });
@@ -572,7 +576,7 @@ app.post('/api/habits', asyncHandler(async (req, res) => {
 }));
 
 app.put('/api/habits/:id', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   const validation = validateHabitInput(req.body);
   if (!validation.valid) {
     res.status(400).json({ error: 'Validation failed', message: validation.errors.join(' ') });
@@ -598,7 +602,7 @@ app.put('/api/habits/:id', asyncHandler(async (req, res) => {
 }));
 
 app.delete('/api/habits/:id', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   const deleted = await HabitModel.findOneAndDelete({ userId: user._id, appId: req.params.id });
   if (!deleted) {
     res.status(404).json({ error: 'Not found', message: 'Habit not found.' });
@@ -611,7 +615,7 @@ app.delete('/api/habits/:id', asyncHandler(async (req, res) => {
 }));
 
 app.post('/api/habits/:id/toggle', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   const date = req.body?.date || getToday();
   if (!isValidDate(date)) {
     res.status(400).json({ error: 'Validation failed', message: 'Date must be YYYY-MM-DD.' });
@@ -644,7 +648,7 @@ app.post('/api/habits/:id/toggle', asyncHandler(async (req, res) => {
 }));
 
 app.put('/api/habits/reorder', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   const habits = Array.isArray(req.body?.habits) ? req.body.habits : null;
   if (!habits || !habits.every((habit, index) => typeof habit.id === 'string' && Number.isInteger(index))) {
     res.status(400).json({ error: 'Validation failed', message: 'Habits must be an ordered array.' });
@@ -656,7 +660,7 @@ app.put('/api/habits/reorder', asyncHandler(async (req, res) => {
 }));
 
 app.post('/api/import', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   const habits = Array.isArray(req.body?.habits) ? req.body.habits : null;
   if (!habits) {
     res.status(400).json({ error: 'Validation failed', message: 'Import payload must contain a habits array.' });
@@ -678,7 +682,7 @@ app.post('/api/import', asyncHandler(async (req, res) => {
 }));
 
 app.delete('/api/data', asyncHandler(async (req, res) => {
-  const user = await getUser(req);
+  const user = req.user;
   await HabitModel.deleteMany({ userId: user._id });
   await HabitLog.deleteMany({ userId: user._id });
   await Streak.deleteMany({ userId: user._id });

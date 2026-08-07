@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
+import authRoutes from './routes/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -516,6 +517,14 @@ app.get('/api/health', (req, res) => {
     message: isDbReady() ? 'MongoDB connected.' : dbError || 'MongoDB is not connected yet.',
   });
 });
+
+// JWT_SECRET startup warning
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  WARNING: JWT_SECRET is not set. Auth endpoints will not work.');
+}
+
+// Auth routes (require DB)
+app.use('/api/auth', requireDb, authRoutes);
 
 app.use('/api', requireDb);
 

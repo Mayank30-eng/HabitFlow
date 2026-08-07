@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 import authRoutes from './routes/auth.js';
-import { createProtectOrLegacy } from './middleware/auth.js';
+import { protect } from './middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +13,6 @@ const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT || 3001);
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || 'habit_tracker';
-const DEFAULT_USER_KEY = process.env.DEFAULT_USER_KEY || 'default-user';
 
 let dbError = MONGODB_URI ? null : 'MONGODB_URI is not configured.';
 
@@ -153,24 +152,6 @@ const requireDb = (req, res, next) => {
   }
   next();
 };
-
-const getUserKey = (req) => {
-  const headerKey = req.get('x-user-id');
-  const queryKey = typeof req.query.userId === 'string' ? req.query.userId : null;
-  return (headerKey || queryKey || DEFAULT_USER_KEY).trim() || DEFAULT_USER_KEY;
-};
-
-const getUser = async (req) => {
-  const key = getUserKey(req);
-  return User.findOneAndUpdate(
-    { key },
-    { $setOnInsert: { key, name: 'Habit Tracker User' } },
-    { new: true, upsert: true }
-  );
-};
-
-// Dual-auth middleware: JWT preferred, legacy X-User-Id fallback
-const protectOrLegacy = createProtectOrLegacy(getUser);
 
 const ensureSettings = async (userId) => {
   return Settings.findOneAndUpdate(
@@ -471,7 +452,6 @@ const buildState = async (user) => {
   const habits = await getClientHabits(user._id);
   const analytics = await persistDerivedData(user._id, habits);
   return {
-    user: { id: String(user._id), key: user.key, name: user.name },
     habits,
     settings: { theme: settings.theme },
     analytics,
@@ -530,7 +510,7 @@ if (!process.env.JWT_SECRET) {
 // Auth routes (require DB)
 app.use('/api/auth', requireDb, authRoutes);
 
-app.use('/api', requireDb, protectOrLegacy);
+app.use('/api', requireDb, protect);
 
 app.get('/api/state', asyncHandler(async (req, res) => {
   const user = req.user;

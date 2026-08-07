@@ -54,11 +54,6 @@ export interface AuthUser {
 }
 
 export interface PersistedAppState {
-  user?: {
-    id: string;
-    key: string;
-    name: string;
-  };
   habits: Habit[];
   settings: UserSettings;
   analytics?: unknown;

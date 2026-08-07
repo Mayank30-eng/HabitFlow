@@ -1,7 +1,6 @@
 import type { AuthUser, Habit, HabitFormData, PersistedAppState, UserSettings } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
-const USER_KEY = import.meta.env.VITE_USER_ID || 'default-user';
 export const TOKEN_KEY = 'habit-tracker-auth-token';
 
 export const getToken = (): string | null => {
@@ -28,7 +27,6 @@ export class ApiError extends Error {
 
 const request = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
   const headers = new Headers(options.headers);
-  headers.set('X-User-Id', USER_KEY);
 
   const token = getToken();
   if (token) {

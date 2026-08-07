@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sun, Moon, Download, Upload, Trash2, RotateCcw } from 'lucide-react';
+import { Sun, Moon, Download, Upload, Trash2 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useHabits } from '../contexts/HabitContext';
 import { useToast } from '../contexts/ToastContext';
-import { exportData, importData } from '../utils/storage';
+import { exportData } from '../utils/storage';
 import { formatDate } from '../utils/helpers';
 import ConfirmModal from '../components/modals/ConfirmModal';
 
 const Settings: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { state, importData: importHabits } = useHabits();
+  const { state, importData: importHabits, resetData } = useHabits();
   const { showToast } = useToast();
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const [importText, setImportText] = useState('');
@@ -28,11 +28,11 @@ const Settings: React.FC = () => {
     showToast('Data exported successfully', 'success');
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     try {
       const data = JSON.parse(importText);
       if (Array.isArray(data)) {
-        importHabits(data);
+        await importHabits(data);
         showToast('Data imported successfully', 'success');
         setImportText('');
         setShowImport(false);
@@ -44,9 +44,13 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleReset = () => {
-    localStorage.removeItem('habit-tracker-data');
-    window.location.reload();
+  const handleReset = async () => {
+    try {
+      await resetData();
+      showToast('All data reset', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to reset data', 'error');
+    }
   };
 
   return (

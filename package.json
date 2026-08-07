@@ -5,14 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.mjs",
+    "start": "node server/index.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "date-fns": "^4.4.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "framer-motion": "^12.42.0",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.21.0",
+    "mongoose": "^9.7.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.0",

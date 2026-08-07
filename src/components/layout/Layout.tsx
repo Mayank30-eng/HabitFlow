@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { useHabits } from '../../contexts/HabitContext';
+import LoadingSkeleton from '../common/LoadingSkeleton';
 
 const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -58,9 +59,25 @@ const Layout: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="max-w-7xl mx-auto"
+            className="max-w-7xl mx-auto space-y-4"
           >
-            <Outlet />
+            {state.error && (
+              <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+                {state.error}
+              </div>
+            )}
+            {state.saving && (
+              <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+                Saving changes...
+              </div>
+            )}
+            {state.loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <LoadingSkeleton count={4} />
+              </div>
+            ) : (
+              <Outlet />
+            )}
           </motion.div>
         </main>
       </div>

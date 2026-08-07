@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   ListChecks, Flame, Target, TrendingUp, Zap, Shield, Activity,
-  Plus, ChevronRight, Heart, Dumbbell, BookOpen, Briefcase, Brain, Users, Wallet, Palette, Tag
+  Plus, ChevronRight
 } from 'lucide-react';
 import { useHabits } from '../contexts/HabitContext';
 import { useToast } from '../contexts/ToastContext';
@@ -14,26 +13,14 @@ import ConfirmModal from '../components/modals/ConfirmModal';
 import CalendarHeatmap from '../components/common/CalendarHeatmap';
 import EmptyState from '../components/common/EmptyState';
 import {
-  calculateStreak, calculateLongestStreak, calculateOverallSuccessRate,
-  calculateDailyCompletionRate, calculateGrowthScore, getOverallStatus, getGoodVsBadStats
+  calculateOverallSuccessRate, calculateGrowthScore, getOverallStatus, getGoodVsBadStats,
+  getGoodHabitDashboardStats, getBadHabitDashboardStats
 } from '../utils/calculations';
-import { getToday, categories, formatDate } from '../utils/helpers';
+import { getToday, formatDate } from '../utils/helpers';
 import type { HabitFormData } from '../types';
 
-const categoryIconMap: Record<string, React.ElementType> = {
-  Health: Heart,
-  Fitness: Dumbbell,
-  Learning: BookOpen,
-  Productivity: Briefcase,
-  Mindfulness: Brain,
-  Social: Users,
-  Finance: Wallet,
-  Creative: Palette,
-  Other: Tag,
-};
-
 const Dashboard: React.FC = () => {
-  const { state, toggleHabit, deleteHabit, addHabit, updateHabit, getFilteredHabits } = useHabits();
+  const { state, toggleHabit, deleteHabit, addHabit, updateHabit } = useHabits();
   const { showToast } = useToast();
   const [habitModalOpen, setHabitModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -45,27 +32,17 @@ const Dashboard: React.FC = () => {
 
   const stats = useMemo(() => {
     const total = habits.length;
-    const goodHabits = habits.filter((h) => h.type === 'good');
-    const completedToday = goodHabits.filter((h) => {
-      const rec = h.history.find((r) => r.date === today);
-      return rec && rec.completed;
-    }).length;
-    const currentStreak = habits.length > 0 ? Math.max(...habits.map(calculateStreak)) : 0;
-    const longestStreak = habits.length > 0 ? Math.max(...habits.map(calculateLongestStreak)) : 0;
+    const good = getGoodHabitDashboardStats(habits);
+    const bad = getBadHabitDashboardStats(habits);
     const successRate = calculateOverallSuccessRate(habits);
-    const dailyRate = calculateDailyCompletionRate(habits, today);
     const growth = calculateGrowthScore(habits);
-    const { goodCompleted, badPerformed } = getGoodVsBadStats(habits);
-    const totalDays = habits.length > 0
-      ? Math.max(...habits.map((h) => h.history.length))
-      : 0;
+    const { badAvoided, badPerformed, badTotal } = getGoodVsBadStats(habits);
     const { completed, missed, pending } = getOverallStatus(habits);
 
     return {
-      total, completedToday, currentStreak, longestStreak, successRate,
-      dailyRate, growth, goodCompleted, badPerformed, totalDays, completed, missed, pending
+      total, good, bad, successRate, growth, badAvoided, badPerformed, badTotal, completed, missed, pending
     };
-  }, [habits, today]);
+  }, [habits]);
 
   const recentHabits = useMemo(() => {
     return habits.slice(0, 6);
@@ -77,24 +54,30 @@ const Dashboard: React.FC = () => {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = formatDate(date);
-      const dayHabits = habits.filter((h) => h.history.some((r) => r.date === dateStr && r.completed));
-      if (dayHabits.length > 0) {
-        activity.push({ date: dateStr, habits: dayHabits });
+      const goodHabits = habits.filter((h) => h.type === 'good' && h.history.some((r) => r.date === dateStr && r.completed));
+      const badHabits = habits.filter((h) => h.type === 'bad' && h.history.some((r) => r.date === dateStr && r.completed));
+      if (goodHabits.length > 0 || badHabits.length > 0) {
+        activity.push({ date: dateStr, goodHabits, badHabits });
       }
     }
     return activity.slice(0, 5);
   }, [habits]);
 
-  const handleToggle = (id: string) => {
-    toggleHabit(id);
+  const handleToggle = async (id: string) => {
     const habit = habits.find((h) => h.id === id);
-    if (habit) {
-      const rec = habit.history.find((r) => r.date === today);
-      const wasCompleted = rec && rec.completed;
+    if (!habit) return;
+    const rec = habit.history.find((r) => r.date === today);
+    const wasMarked = Boolean(rec?.completed);
+    try {
+      await toggleHabit(id);
       showToast(
-        wasCompleted ? `${habit.name} marked as missed` : `${habit.name} completed!`,
-        wasCompleted ? 'info' : 'success'
+        habit.type === 'good'
+          ? wasMarked ? `${habit.name} marked as missed` : `${habit.name} completed!`
+          : wasMarked ? `${habit.name} occurrence removed` : `${habit.name} occurrence tracked`,
+        habit.type === 'bad' && !wasMarked ? 'info' : 'success'
       );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to update habit', 'error');
     }
   };
 
@@ -108,22 +91,30 @@ const Dashboard: React.FC = () => {
     setConfirmModalOpen(true);
   };
 
-  const handleSave = (data: HabitFormData) => {
-    if (editingHabit) {
-      updateHabit(editingHabit, data);
-      showToast('Habit updated successfully', 'success');
-    } else {
-      addHabit(data);
-      showToast('Habit created successfully', 'success');
+  const handleSave = async (data: HabitFormData) => {
+    try {
+      if (editingHabit) {
+        await updateHabit(editingHabit, data);
+        showToast('Habit updated successfully', 'success');
+      } else {
+        await addHabit(data);
+        showToast('Habit created successfully', 'success');
+      }
+      setEditingHabit(null);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to save habit', 'error');
     }
-    setEditingHabit(null);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deletingHabit) {
-      deleteHabit(deletingHabit);
-      showToast('Habit deleted', 'success');
-      setDeletingHabit(null);
+      try {
+        await deleteHabit(deletingHabit);
+        showToast('Habit deleted', 'success');
+        setDeletingHabit(null);
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Unable to delete habit', 'error');
+      }
     }
   };
 
@@ -131,20 +122,31 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats Grid */}
+      {/* Overview Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Habits" value={stats.total} icon={<ListChecks className="w-5 h-5" />} color="blue" />
-        <StatCard title="Completed Today" value={`${stats.completedToday}/${stats.total}`} icon={<Target className="w-5 h-5" />} color="green" trend="up" trendValue={`${stats.dailyRate}%`} />
-        <StatCard title="Current Streak" value={stats.currentStreak} icon={<Flame className="w-5 h-5" />} color="amber" subtitle="days" />
-        <StatCard title="Success Rate" value={`${stats.successRate}%`} icon={<TrendingUp className="w-5 h-5" />} color="purple" trend="up" trendValue={`${stats.growth > 0 ? '+' : ''}${stats.growth}%`} />
+        <StatCard title="Overall Success" value={`${stats.successRate}%`} icon={<TrendingUp className="w-5 h-5" />} color="purple" trend={stats.growth >= 0 ? 'up' : 'down'} trendValue={`${stats.growth > 0 ? '+' : ''}${stats.growth}%`} />
+        <StatCard title="Growth Score" value={`${stats.growth > 0 ? '+' : ''}${stats.growth}%`} icon={<Activity className="w-5 h-5" />} color="green" trend={stats.growth >= 0 ? 'up' : 'down'} trendValue="vs last month" />
+        <StatCard title="Good Completed Today" value={`${stats.good.completedToday}/${stats.good.totalGood}`} icon={<Target className="w-5 h-5" />} color="green" />
       </div>
 
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Longest Streak" value={stats.longestStreak} icon={<Zap className="w-5 h-5" />} color="amber" />
-        <StatCard title="Growth Score" value={`${stats.growth > 0 ? '+' : ''}${stats.growth}%`} icon={<Activity className="w-5 h-5" />} color="green" trend={stats.growth >= 0 ? 'up' : 'down'} trendValue="vs last month" />
-        <StatCard title="Good Habits" value={stats.goodCompleted} icon={<Shield className="w-5 h-5" />} color="green" />
-        <StatCard title="Bad Habits" value={stats.badPerformed} icon={<Shield className="w-5 h-5" />} color="red" />
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Good Habits</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard title="Completion Rate" value={`${stats.good.completionRate}%`} icon={<Target className="w-5 h-5" />} color="green" />
+          <StatCard title="Current Streak" value={stats.good.currentStreak} icon={<Flame className="w-5 h-5" />} color="amber" subtitle="days" />
+          <StatCard title="Longest Streak" value={stats.good.longestStreak} icon={<Zap className="w-5 h-5" />} color="amber" subtitle="days" />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Bad Habits</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard title="Avoidance Streak" value={stats.bad.bestAvoidanceStreak} icon={<Shield className="w-5 h-5" />} color="green" subtitle="best current" />
+          <StatCard title="Relapse Count" value={stats.bad.totalRelapses} icon={<Activity className="w-5 h-5" />} color="red" />
+          <StatCard title="Occurrences This Week" value={stats.bad.occurrencesThisWeek} icon={<Flame className="w-5 h-5" />} color="red" />
+          <StatCard title="Occurrences This Month" value={stats.bad.occurrencesThisMonth} icon={<TrendingUp className="w-5 h-5" />} color="red" />
+        </div>
       </div>
 
       {/* Heatmap + Habits */}
@@ -159,12 +161,13 @@ const Dashboard: React.FC = () => {
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Today's Status</h2>
           <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Good Habits</p>
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600 dark:text-slate-300">Completed</span>
               <span className="text-sm font-semibold text-green-600">{stats.completed}</span>
             </div>
             <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-green-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.completed / stats.total) * 100 : 0}%` }} />
+              <div className="h-full bg-green-500 rounded-full" style={{ width: `${stats.good.totalGood > 0 ? (stats.completed / stats.good.totalGood) * 100 : 0}%` }} />
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600 dark:text-slate-300">Missed</span>
@@ -173,6 +176,17 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600 dark:text-slate-300">Pending</span>
               <span className="text-sm font-semibold text-amber-600">{stats.pending}</span>
+            </div>
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Bad Habits</p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600 dark:text-slate-300">Avoided</span>
+                <span className="text-sm font-semibold text-green-600">{stats.badAvoided}/{stats.badTotal}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600 dark:text-slate-300">Occurred</span>
+                <span className="text-sm font-semibold text-red-600">{stats.badPerformed}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -228,17 +242,24 @@ const Dashboard: React.FC = () => {
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Recent Activity</h2>
         {recentActivity.length === 0 ? (
-          <EmptyState title="No recent activity" description="Complete some habits to see activity here." />
+          <EmptyState title="No recent activity" description="Track some habits to see activity here." />
         ) : (
           <div className="space-y-3">
             {recentActivity.map((day) => (
               <div key={day.date} className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0" />
+                <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${day.badHabits.length > 0 ? 'bg-red-500' : 'bg-green-500'}`} />
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{day.date}</p>
-                  <p className="text-sm text-slate-700 dark:text-slate-300">
-                    {day.habits.map((h) => h.name).join(', ')}
-                  </p>
+                  {day.goodHabits.length > 0 && (
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      Completed: {day.goodHabits.map((h) => h.name).join(', ')}
+                    </p>
+                  )}
+                  {day.badHabits.length > 0 && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      Occurred: {day.badHabits.map((h) => h.name).join(', ')}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}

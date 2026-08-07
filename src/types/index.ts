@@ -42,3 +42,18 @@ export interface HabitFormData {
   customDays: number[];
   startDate: string;
 }
+
+export interface UserSettings {
+  theme: 'light' | 'dark';
+}
+
+export interface PersistedAppState {
+  user?: {
+    id: string;
+    key: string;
+    name: string;
+  };
+  habits: Habit[];
+  settings: UserSettings;
+  analytics?: unknown;
+}

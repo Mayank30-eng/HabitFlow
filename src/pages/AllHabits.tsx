@@ -7,7 +7,7 @@ import HabitCard from '../components/common/HabitCard';
 import HabitModal from '../components/modals/HabitModal';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import EmptyState from '../components/common/EmptyState';
-import { categories } from '../utils/helpers';
+import { categories, getToday } from '../utils/helpers';
 import type { HabitFormData } from '../types';
 
 const AllHabits: React.FC = () => {
@@ -22,14 +22,20 @@ const AllHabits: React.FC = () => {
   const habits = getFilteredHabits();
   const { filters } = state;
 
-  const handleToggle = (id: string) => {
-    toggleHabit(id);
+  const handleToggle = async (id: string) => {
     const habit = state.habits.find((h) => h.id === id);
-    if (habit) {
+    const wasMarked = Boolean(habit?.history.find((r) => r.date === getToday())?.completed);
+    if (!habit) return;
+    try {
+      await toggleHabit(id);
       showToast(
-        `${habit.name} ${habit.type === 'good' ? 'completed' : 'tracked'}`,
-        'success'
+        habit.type === 'good'
+          ? wasMarked ? `${habit.name} marked as missed` : `${habit.name} completed`
+          : wasMarked ? `${habit.name} occurrence removed` : `${habit.name} occurrence tracked`,
+        habit.type === 'bad' && !wasMarked ? 'info' : 'success'
       );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to update habit', 'error');
     }
   };
 
@@ -43,22 +49,30 @@ const AllHabits: React.FC = () => {
     setConfirmModalOpen(true);
   };
 
-  const handleSave = (data: HabitFormData) => {
-    if (editingHabit) {
-      updateHabit(editingHabit, data);
-      showToast('Habit updated successfully', 'success');
-    } else {
-      addHabit(data);
-      showToast('Habit created successfully', 'success');
+  const handleSave = async (data: HabitFormData) => {
+    try {
+      if (editingHabit) {
+        await updateHabit(editingHabit, data);
+        showToast('Habit updated successfully', 'success');
+      } else {
+        await addHabit(data);
+        showToast('Habit created successfully', 'success');
+      }
+      setEditingHabit(null);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to save habit', 'error');
     }
-    setEditingHabit(null);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deletingHabit) {
-      deleteHabit(deletingHabit);
-      showToast('Habit deleted', 'success');
-      setDeletingHabit(null);
+      try {
+        await deleteHabit(deletingHabit);
+        showToast('Habit deleted', 'success');
+        setDeletingHabit(null);
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Unable to delete habit', 'error');
+      }
     }
   };
 

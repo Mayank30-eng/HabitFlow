@@ -14,7 +14,7 @@ const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({ habits, days = 365 })
 
   const getColor = (date: string): string => {
     const goodCompleted = habits.filter((h) => h.type === 'good' && getHabitRecord(h, date)?.completed).length;
-    const goodTotal = habits.filter((h) => h.type === 'good').length;
+    const goodTotal = habits.filter((h) => h.type === 'good' && h.startDate <= date).length;
     const badPerformed = habits.filter((h) => h.type === 'bad' && getHabitRecord(h, date)?.completed).length;
 
     if (badPerformed > 0) {

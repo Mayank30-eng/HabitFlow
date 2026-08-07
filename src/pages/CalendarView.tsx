@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useHabits } from '../contexts/HabitContext';
 import { getHabitRecord, getToday } from '../utils/helpers';
 
 const CalendarView: React.FC = () => {
-  const { state, toggleHabit } = useHabits();
+  const { state } = useHabits();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const year = currentDate.getFullYear();
@@ -39,7 +39,7 @@ const CalendarView: React.FC = () => {
 
   const getDayStatus = (dateStr: string) => {
     const goodCompleted = state.habits.filter((h) => h.type === 'good' && getHabitRecord(h, dateStr)?.completed).length;
-    const goodTotal = state.habits.filter((h) => h.type === 'good').length;
+    const goodTotal = state.habits.filter((h) => h.type === 'good' && h.startDate <= dateStr).length;
     const badPerformed = state.habits.filter((h) => h.type === 'bad' && getHabitRecord(h, dateStr)?.completed).length;
 
     if (badPerformed > 0) return 'bad';
@@ -96,7 +96,7 @@ const CalendarView: React.FC = () => {
             const isToday = dateStr === today;
             const dayHabits = getDayHabits(dateStr);
             const completedCount = dayHabits.filter((h) => h.type === 'good' && getHabitRecord(h, dateStr)?.completed).length;
-            const totalGood = state.habits.filter((h) => h.type === 'good').length;
+            const totalGood = state.habits.filter((h) => h.type === 'good' && h.startDate <= dateStr).length;
 
             const statusColors = {
               great: 'bg-green-500 text-white',

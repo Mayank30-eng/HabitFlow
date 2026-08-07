@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { TrendingUp, BarChart3, PieChart as PieChartIcon, Calendar } from 'lucide-react';
 import { useHabits } from '../contexts/HabitContext';
 import CalendarHeatmap from '../components/common/CalendarHeatmap';
 import {
   getCompletionTrend, getWeeklyData, getMonthlyData, getHabitComparison,
-  getOverallStatus, getGoodVsBadStats
+  getOverallStatus, getGoodVsBadStats, getBadHabitTrend
 } from '../utils/calculations';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -13,19 +12,18 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 
-const COLORS = ['#22c55e', '#ef4444', '#f59e0b'];
-
 const Analytics: React.FC = () => {
   const { state } = useHabits();
   const [timeRange, setTimeRange] = useState<'7' | '30' | '90'>('30');
   const habits = state.habits;
 
   const trendData = getCompletionTrend(habits, parseInt(timeRange));
+  const badTrendData = getBadHabitTrend(habits, parseInt(timeRange));
   const weeklyData = getWeeklyData(habits);
   const monthlyData = getMonthlyData(habits);
   const comparisonData = getHabitComparison(habits);
   const overallStatus = getOverallStatus(habits);
-  const { goodCompleted, badPerformed } = getGoodVsBadStats(habits);
+  const { goodCompleted, badAvoided, badPerformed } = getGoodVsBadStats(habits);
 
   const pieData = [
     { name: 'Completed', value: overallStatus.completed, color: '#22c55e' },
@@ -35,7 +33,8 @@ const Analytics: React.FC = () => {
 
   const goodVsBadData = [
     { name: 'Good Completed', value: goodCompleted, color: '#22c55e' },
-    { name: 'Bad Performed', value: badPerformed, color: '#ef4444' },
+    { name: 'Bad Avoided', value: badAvoided, color: '#3b82f6' },
+    { name: 'Bad Occurred', value: badPerformed, color: '#ef4444' },
   ];
 
   const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string }>; label?: string }) => {
@@ -73,11 +72,11 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Completion Trend */}
+      {/* Good Completion Trend */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-5 h-5 text-green-500" />
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Completion Trend</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Good Habit Completion Trend</h2>
         </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -87,8 +86,30 @@ const Analytics: React.FC = () => {
               <YAxis stroke="#94a3b8" fontSize={12} />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Line type="monotone" dataKey="completed" stroke="#22c55e" strokeWidth={2} dot={false} name="Completed" />
-              <Line type="monotone" dataKey="total" stroke="#94a3b8" strokeWidth={2} dot={false} name="Total" />
+              <Line type="monotone" dataKey="completed" stroke="#22c55e" strokeWidth={2} dot={false} name="Completed Good Habits" />
+              <Line type="monotone" dataKey="total" stroke="#94a3b8" strokeWidth={2} dot={false} name="Active Good Habits" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Bad Habit Trend */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-5 h-5 text-red-500" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Bad Habit Avoidance Trend</h2>
+        </div>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={badTrendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="date" tickFormatter={(v: string) => v.slice(5)} stroke="#94a3b8" fontSize={12} />
+              <YAxis stroke="#94a3b8" fontSize={12} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Line type="monotone" dataKey="avoided" stroke="#22c55e" strokeWidth={2} dot={false} name="Avoided" />
+              <Line type="monotone" dataKey="occurrences" stroke="#ef4444" strokeWidth={2} dot={false} name="Occurrences" />
+              <Line type="monotone" dataKey="total" stroke="#94a3b8" strokeWidth={2} dot={false} name="Active Bad Habits" />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -99,7 +120,7 @@ const Analytics: React.FC = () => {
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Weekly Progress</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Good Weekly Completion</h2>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -108,7 +129,7 @@ const Analytics: React.FC = () => {
                 <XAxis dataKey="week" stroke="#94a3b8" fontSize={12} />
                 <YAxis stroke="#94a3b8" fontSize={12} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="rate" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Completion %" />
+                <Bar dataKey="rate" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Good Completion %" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -116,7 +137,7 @@ const Analytics: React.FC = () => {
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Calendar className="w-5 h-5 text-purple-500" />
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Monthly Progress</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Good Monthly Completion</h2>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -125,7 +146,7 @@ const Analytics: React.FC = () => {
                 <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} />
                 <YAxis stroke="#94a3b8" fontSize={12} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="rate" fill="#a855f7" radius={[4, 4, 0, 0]} name="Completion %" />
+                <Bar dataKey="rate" fill="#a855f7" radius={[4, 4, 0, 0]} name="Good Completion %" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -137,7 +158,7 @@ const Analytics: React.FC = () => {
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Habit Comparison</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Habit Success Comparison</h2>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -146,7 +167,7 @@ const Analytics: React.FC = () => {
                 <XAxis type="number" stroke="#94a3b8" fontSize={12} domain={[0, 100]} />
                 <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={12} width={100} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="rate" radius={[0, 4, 4, 0]} name="30-Day Rate %">
+                <Bar dataKey="rate" radius={[0, 4, 4, 0]} name="30-Day Success %">
                   {comparisonData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.type === 'good' ? '#22c55e' : '#ef4444'} />
                   ))}
@@ -160,7 +181,7 @@ const Analytics: React.FC = () => {
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <PieChartIcon className="w-5 h-5 text-green-500" />
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Today's Status</h2>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Good Habit Status</h2>
             </div>
             <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
@@ -186,7 +207,7 @@ const Analytics: React.FC = () => {
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <PieChartIcon className="w-5 h-5 text-blue-500" />
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Good vs Bad</h2>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Today by Type</h2>
             </div>
             <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">

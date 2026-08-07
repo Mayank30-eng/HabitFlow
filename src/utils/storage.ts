@@ -1,15 +1,7 @@
 const STORAGE_KEY = 'habit-tracker-data';
-const THEME_KEY = 'habit-tracker-theme';
+const MIGRATION_KEY = 'habit-tracker-mongodb-migrated';
 
-export const saveHabits = (habits: unknown): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
-  } catch {
-    // Storage full or unavailable
-  }
-};
-
-export const loadHabits = (): unknown => {
+export const loadLegacyHabits = (): unknown => {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     return data ? JSON.parse(data) : null;
@@ -18,20 +10,27 @@ export const loadHabits = (): unknown => {
   }
 };
 
-export const saveTheme = (theme: 'light' | 'dark'): void => {
+export const hasCompletedMongoMigration = (): boolean => {
   try {
-    localStorage.setItem(THEME_KEY, theme);
+    return localStorage.getItem(MIGRATION_KEY) === 'true';
   } catch {
-    // Ignore
+    return false;
   }
 };
 
-export const loadTheme = (): 'light' | 'dark' | null => {
+export const markMongoMigrationComplete = (): void => {
   try {
-    const theme = localStorage.getItem(THEME_KEY);
-    return theme === 'light' || theme === 'dark' ? theme : null;
+    localStorage.setItem(MIGRATION_KEY, 'true');
   } catch {
-    return null;
+    // Ignore unavailable browser storage.
+  }
+};
+
+export const clearLegacyHabits = (): void => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore unavailable browser storage.
   }
 };
 

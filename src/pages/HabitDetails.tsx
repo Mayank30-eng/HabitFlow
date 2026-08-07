@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Flame, Target, TrendingUp, CalendarDays, Edit2, Trash2, Check, X
+  ArrowLeft, Flame, Target, TrendingUp, CalendarDays, Edit2, Trash2, Check, X, Shield, Activity
 } from 'lucide-react';
 import { useHabits } from '../contexts/HabitContext';
 import { useToast } from '../contexts/ToastContext';
@@ -11,13 +10,15 @@ import ConfirmModal from '../components/modals/ConfirmModal';
 import EmptyState from '../components/common/EmptyState';
 import ProgressBar from '../components/common/ProgressBar';
 import {
-  calculateStreak, calculateLongestStreak, calculateCompletionRate,
-  calculateTotalCompletions, getHabitImpactScore, getCompletionTrend
+  calculateStreak, calculateLongestStreak, calculateSuccessRate,
+  calculateTotalSuccesses, calculateTimesPerformed, getHabitImpactScore,
+  calculateRelapseCount, calculateOccurrencesInPeriod, calculateBadHabitPenaltyImpact,
+  getHabitSuccessTrend, getHabitActiveDates, isHabitSuccessOnDate
 } from '../utils/calculations';
-import { getHabitRecord, getToday, getDaysInRange, formatDate } from '../utils/helpers';
+import { getHabitRecord, getToday, formatDate } from '../utils/helpers';
 import type { HabitFormData } from '../types';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart
 } from 'recharts';
 
 const HabitDetails: React.FC = () => {
@@ -34,11 +35,17 @@ const HabitDetails: React.FC = () => {
     if (!habit) return null;
     const streak = calculateStreak(habit);
     const longest = calculateLongestStreak(habit);
-    const rate = calculateCompletionRate(habit, 30);
-    const total = calculateTotalCompletions(habit);
-    const allDays = getDaysInRange(habit.startDate, getToday()).length;
+    const rate = calculateSuccessRate(habit, 30);
+    const totalSuccesses = calculateTotalSuccesses(habit);
+    const timesPerformed = habit.type === 'bad' ? calculateTimesPerformed(habit) : 0;
+    const relapseCount = habit.type === 'bad' ? calculateRelapseCount(habit) : 0;
+    const occurrencesThisWeek = habit.type === 'bad' ? calculateOccurrencesInPeriod(habit, 7) : 0;
+    const occurrencesThisMonth = habit.type === 'bad' ? calculateOccurrencesInPeriod(habit, 30) : 0;
+    const penaltyImpact = habit.type === 'bad' ? calculateBadHabitPenaltyImpact(habit, 30) : 0;
+    const today = getToday();
+    const allDays = getHabitActiveDates(habit, habit.startDate, today).length;
     const impact = getHabitImpactScore(habit, state.habits);
-    const trend = getCompletionTrend([habit], 30);
+    const trend = getHabitSuccessTrend(habit, 30);
     const monthly = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
@@ -46,14 +53,26 @@ const HabitDetails: React.FC = () => {
       const monthName = d.toLocaleString('default', { month: 'short' });
       const start = formatDate(new Date(d.getFullYear(), d.getMonth(), 1));
       const end = formatDate(new Date(d.getFullYear(), d.getMonth() + 1, 0));
-      const range = getDaysInRange(start, end);
-      const completed = range.filter((date) => {
-        const record = getHabitRecord(habit, date);
-        return record && record.completed;
-      }).length;
-      monthly.push({ month: monthName, completed, total: range.length });
+      const cappedEnd = end > today ? today : end;
+      const range = getHabitActiveDates(habit, start, cappedEnd);
+      const successes = range.filter((date) => isHabitSuccessOnDate(habit, date)).length;
+      monthly.push({ month: monthName, successes, total: range.length });
     }
-    return { streak, longest, rate, total, allDays, impact, trend, monthly };
+    return {
+      streak,
+      longest,
+      rate,
+      totalSuccesses,
+      timesPerformed,
+      relapseCount,
+      occurrencesThisWeek,
+      occurrencesThisMonth,
+      penaltyImpact,
+      allDays,
+      impact,
+      trend,
+      monthly,
+    };
   }, [habit, state.habits]);
 
   if (!habit) {
@@ -76,26 +95,50 @@ const HabitDetails: React.FC = () => {
     );
   }
 
-  const handleSave = (data: HabitFormData) => {
-    updateHabit(habit.id, data);
-    showToast('Habit updated successfully', 'success');
+  const handleSave = async (data: HabitFormData) => {
+    try {
+      await updateHabit(habit.id, data);
+      showToast('Habit updated successfully', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to save habit', 'error');
+    }
   };
 
-  const handleDelete = () => {
-    deleteHabit(habit.id);
-    showToast('Habit deleted', 'success');
-    navigate('/habits');
+  const handleDelete = async () => {
+    try {
+      await deleteHabit(habit.id);
+      showToast('Habit deleted', 'success');
+      navigate('/habits');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to delete habit', 'error');
+    }
   };
 
   const todayRecord = getHabitRecord(habit, getToday());
   const isCompleted = todayRecord && todayRecord.completed;
+  const successLabel = habit.type === 'bad' ? 'Avoided' : 'Completed';
+
+  const handleToggle = async () => {
+    const wasMarked = Boolean(todayRecord?.completed);
+    try {
+      await toggleHabit(habit.id);
+      showToast(
+        habit.type === 'good'
+          ? wasMarked ? `${habit.name} marked as missed` : `${habit.name} completed`
+          : wasMarked ? `${habit.name} occurrence removed` : `${habit.name} occurrence tracked`,
+        habit.type === 'bad' && !wasMarked ? 'info' : 'success'
+      );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to update habit', 'error');
+    }
+  };
 
   const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 shadow-lg text-sm">
           <p className="text-slate-500 dark:text-slate-400">{label}</p>
-          <p className="font-semibold text-slate-900 dark:text-slate-100">Completed: {payload[0].value}</p>
+          <p className="font-semibold text-slate-900 dark:text-slate-100">{successLabel}: {payload[0].value}</p>
         </div>
       );
     }
@@ -129,7 +172,7 @@ const HabitDetails: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => toggleHabit(habit.id)}
+            onClick={handleToggle}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               isCompleted
                 ? habit.type === 'good'
@@ -139,9 +182,9 @@ const HabitDetails: React.FC = () => {
             }`}
           >
             {isCompleted ? (
-              habit.type === 'good' ? <><Check className="w-4 h-4" /> Completed</> : <><X className="w-4 h-4" /> Tracked</>
+              habit.type === 'good' ? <><Check className="w-4 h-4" /> Completed</> : <><X className="w-4 h-4" /> Occurred</>
             ) : (
-              habit.type === 'good' ? 'Mark Complete' : 'Mark Performed'
+              habit.type === 'good' ? 'Mark Complete' : 'Mark Occurrence'
             )}
           </button>
           <button
@@ -165,15 +208,15 @@ const HabitDetails: React.FC = () => {
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <Flame className="w-5 h-5 text-amber-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">Current Streak</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{habit.type === 'bad' ? 'Avoidance Streak' : 'Current Streak'}</span>
             </div>
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.streak}</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">days</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">{habit.type === 'bad' ? 'day streak' : 'days'}</div>
           </div>
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <Target className="w-5 h-5 text-green-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">Longest Streak</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{habit.type === 'bad' ? 'Best Avoidance' : 'Longest Streak'}</span>
             </div>
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.longest}</div>
             <div className="text-xs text-slate-400 dark:text-slate-500">days</div>
@@ -181,18 +224,65 @@ const HabitDetails: React.FC = () => {
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-5 h-5 text-blue-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">30-Day Rate</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{habit.type === 'bad' ? '30-Day Avoidance' : '30-Day Rate'}</span>
             </div>
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.rate}%</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">completion</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">{habit.type === 'bad' ? 'avoidance' : 'completion'}</div>
           </div>
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <CalendarDays className="w-5 h-5 text-purple-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">Total</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{habit.type === 'bad' ? 'Total Avoided' : 'Total'}</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">completions</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.totalSuccesses}</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">
+              {habit.type === 'bad' ? `${stats.timesPerformed} times slipped` : 'completions'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {habit.type === 'bad' && stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <X className="w-5 h-5 text-red-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">Occurrence Count</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.timesPerformed}</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">all time</div>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="w-5 h-5 text-red-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">Relapse Count</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.relapseCount}</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">streak breaks</div>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarDays className="w-5 h-5 text-red-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">This Week</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.occurrencesThisWeek}</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">occurrences</div>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="w-5 h-5 text-red-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">This Month</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.occurrencesThisMonth}</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">occurrences</div>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-5 h-5 text-red-500" />
+              <span className="text-sm text-slate-500 dark:text-slate-400">Penalty Impact</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.penaltyImpact}%</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">30 day score loss</div>
           </div>
         </div>
       )}
@@ -203,22 +293,22 @@ const HabitDetails: React.FC = () => {
         <div className="space-y-4">
           <div>
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-slate-600 dark:text-slate-300">Completion Rate</span>
+              <span className="text-slate-600 dark:text-slate-300">{habit.type === 'bad' ? 'Avoidance Rate' : 'Completion Rate'}</span>
               <span className="font-semibold text-slate-900 dark:text-slate-100">{stats?.rate}%</span>
             </div>
-            <ProgressBar value={stats?.rate || 0} color={habit.type === 'good' ? 'green' : 'red'} showLabel={false} />
+            <ProgressBar value={stats?.rate || 0} color={habit.type === 'good' ? 'green' : 'green'} showLabel={false} />
           </div>
           <div>
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-slate-600 dark:text-slate-300">Lifetime Completion</span>
+              <span className="text-slate-600 dark:text-slate-300">{habit.type === 'bad' ? 'Lifetime Avoidance' : 'Lifetime Completion'}</span>
               <span className="font-semibold text-slate-900 dark:text-slate-100">
-                {stats?.total}/{stats?.allDays}
+                {stats?.totalSuccesses}/{stats?.allDays}
               </span>
             </div>
             <ProgressBar
-              value={stats?.total || 0}
+              value={stats?.totalSuccesses || 0}
               max={stats?.allDays || 1}
-              color={habit.type === 'good' ? 'green' : 'red'}
+              color={habit.type === 'good' ? 'green' : 'green'}
               showLabel={false}
             />
           </div>
@@ -235,14 +325,16 @@ const HabitDetails: React.FC = () => {
       {/* Trend Chart */}
       {stats && stats.trend.length > 0 && (
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">30-Day Trend</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+            {habit.type === 'bad' ? '30-Day Avoidance Trend' : '30-Day Completion Trend'}
+          </h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats.trend}>
                 <defs>
                   <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={habit.type === 'good' ? '#22c55e' : '#ef4444'} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={habit.type === 'good' ? '#22c55e' : '#ef4444'} stopOpacity={0} />
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -251,10 +343,11 @@ const HabitDetails: React.FC = () => {
                 <Tooltip content={<CustomTooltip />} />
                 <Area
                   type="monotone"
-                  dataKey="completed"
-                  stroke={habit.type === 'good' ? '#22c55e' : '#ef4444'}
+                  dataKey="successes"
+                  stroke="#22c55e"
                   fill="url(#trendFill)"
                   strokeWidth={2}
+                  name={successLabel}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -265,15 +358,17 @@ const HabitDetails: React.FC = () => {
       {/* Monthly Stats */}
       {stats && stats.monthly.length > 0 && (
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Monthly Statistics</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+            {habit.type === 'bad' ? 'Monthly Avoidance' : 'Monthly Statistics'}
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {stats.monthly.map((m) => (
               <div key={m.month} className="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
                 <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{m.month}</div>
                 <div className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                  {m.total > 0 ? Math.round((m.completed / m.total) * 100) : 0}%
+                  {m.total > 0 ? Math.round((m.successes / m.total) * 100) : 0}%
                 </div>
-                <div className="text-xs text-slate-400 dark:text-slate-500">{m.completed}/{m.total}</div>
+                <div className="text-xs text-slate-400 dark:text-slate-500">{m.successes}/{m.total}</div>
               </div>
             ))}
           </div>
@@ -282,7 +377,9 @@ const HabitDetails: React.FC = () => {
 
       {/* Calendar */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Completion Calendar</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+          {habit.type === 'bad' ? 'Occurrence Calendar' : 'Completion Calendar'}
+        </h2>
         <div className="grid grid-cols-7 gap-2">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
             <div key={d} className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{d}</div>

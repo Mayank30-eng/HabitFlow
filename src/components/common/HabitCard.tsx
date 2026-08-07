@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Check, X, Flame, Edit2, Trash2, GripVertical } from 'lucide-react';
+import { Check, X, Flame, Edit2, Trash2 } from 'lucide-react';
 import type { Habit } from '../../types';
-import { calculateStreak, calculateCompletionRate } from '../../utils/calculations';
-import { getHabitRecord, getToday, getCategoryIcon } from '../../utils/helpers';
+import { calculateStreak, calculateSuccessRate } from '../../utils/calculations';
+import { getHabitRecord, getToday } from '../../utils/helpers';
 import ProgressBar from './ProgressBar';
 
 interface HabitCardProps {
@@ -17,13 +17,9 @@ interface HabitCardProps {
 
 const HabitCard: React.FC<HabitCardProps> = ({ habit, onToggle, onEdit, onDelete, index }) => {
   const streak = calculateStreak(habit);
-  const rate = calculateCompletionRate(habit, 30);
+  const rate = calculateSuccessRate(habit, 30);
   const todayRecord = getHabitRecord(habit, getToday());
   const isCompleted = todayRecord && todayRecord.completed;
-  const isPending = !todayRecord;
-
-  const CategoryIcon = getCategoryIcon(habit.category);
-  // We can't dynamically import components, so we'll use a generic approach or just show the text
 
   return (
     <motion.div
@@ -74,7 +70,7 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, onToggle, onEdit, onDelete
             {streak > 0 && (
               <span className="flex items-center gap-1 text-amber-500">
                 <Flame className="w-3 h-3" />
-                {streak} day{streak !== 1 ? 's' : ''}
+                {streak} {habit.type === 'bad' ? (streak !== 1 ? 'days avoided' : 'day avoided') : (streak !== 1 ? 'days' : 'day')}
               </span>
             )}
           </div>

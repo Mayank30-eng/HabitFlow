@@ -1,24 +1,31 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import type { Habit, HabitFormData, FilterState } from '../types';
-import { saveHabits, loadHabits } from '../utils/storage';
-import { generateId, getToday, getHabitRecord } from '../utils/helpers';
-import createDemoHabits from '../data/demoData';
+import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
+import type { Habit, HabitFormData, FilterState, PersistedAppState, UserSettings } from '../types';
+import { getToday, getHabitRecord } from '../utils/helpers';
+import { api } from '../utils/api';
+import {
+  clearLegacyHabits,
+  hasCompletedMongoMigration,
+  loadLegacyHabits,
+  markMongoMigrationComplete,
+} from '../utils/storage';
 
 interface HabitState {
   habits: Habit[];
   filters: FilterState;
+  loading: boolean;
+  saving: boolean;
+  error: string | null;
+  settings: UserSettings;
+  analytics?: unknown;
 }
 
 type HabitAction =
-  | { type: 'SET_HABITS'; payload: Habit[] }
-  | { type: 'ADD_HABIT'; payload: Habit }
-  | { type: 'UPDATE_HABIT'; payload: Habit }
-  | { type: 'DELETE_HABIT'; payload: string }
-  | { type: 'TOGGLE_HABIT'; payload: { id: string; date: string } }
-  | { type: 'REORDER_HABITS'; payload: Habit[] }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_SAVING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_APP_STATE'; payload: PersistedAppState }
   | { type: 'SET_FILTERS'; payload: Partial<FilterState> }
-  | { type: 'RESET_FILTERS' }
-  | { type: 'IMPORT_DATA'; payload: Habit[] };
+  | { type: 'RESET_FILTERS' };
 
 const initialFilters: FilterState = {
   dateRange: 'today',
@@ -28,46 +35,38 @@ const initialFilters: FilterState = {
   searchQuery: '',
 };
 
+const normalizeHabit = (habit: Habit): Habit => {
+  if (habit.type !== 'bad') return habit;
+  return {
+    ...habit,
+    history: habit.history.filter((record) => record.completed),
+  };
+};
+
+const normalizeHabits = (habits: Habit[]): Habit[] => habits.map(normalizeHabit);
+
+const applyAppState = (state: HabitState, payload: PersistedAppState): HabitState => ({
+  ...state,
+  habits: normalizeHabits(payload.habits || []),
+  settings: payload.settings || state.settings,
+  analytics: payload.analytics,
+  error: null,
+});
+
 const habitReducer = (state: HabitState, action: HabitAction): HabitState => {
   switch (action.type) {
-    case 'SET_HABITS':
-      return { ...state, habits: action.payload };
-    case 'ADD_HABIT':
-      return { ...state, habits: [...state.habits, action.payload] };
-    case 'UPDATE_HABIT':
-      return {
-        ...state,
-        habits: state.habits.map((h) => (h.id === action.payload.id ? action.payload : h)),
-      };
-    case 'DELETE_HABIT':
-      return { ...state, habits: state.habits.filter((h) => h.id !== action.payload) };
-    case 'TOGGLE_HABIT': {
-      const { id, date } = action.payload;
-      return {
-        ...state,
-        habits: state.habits.map((h) => {
-          if (h.id !== id) return h;
-          const existing = h.history.find((rec) => rec.date === date);
-          if (existing) {
-            return {
-              ...h,
-              history: h.history.map((rec) =>
-                rec.date === date ? { ...rec, completed: !rec.completed } : rec
-              ),
-            };
-          }
-          return { ...h, history: [...h.history, { date, completed: true }] };
-        }),
-      };
-    }
-    case 'REORDER_HABITS':
-      return { ...state, habits: action.payload };
+    case 'SET_LOADING':
+      return { ...state, loading: action.payload };
+    case 'SET_SAVING':
+      return { ...state, saving: action.payload };
+    case 'SET_ERROR':
+      return { ...state, error: action.payload };
+    case 'SET_APP_STATE':
+      return applyAppState(state, action.payload);
     case 'SET_FILTERS':
       return { ...state, filters: { ...state.filters, ...action.payload } };
     case 'RESET_FILTERS':
       return { ...state, filters: initialFilters };
-    case 'IMPORT_DATA':
-      return { ...state, habits: action.payload };
     default:
       return state;
   }
@@ -75,69 +74,99 @@ const habitReducer = (state: HabitState, action: HabitAction): HabitState => {
 
 interface HabitContextType {
   state: HabitState;
-  addHabit: (data: HabitFormData) => void;
-  updateHabit: (id: string, data: HabitFormData) => void;
-  deleteHabit: (id: string) => void;
-  toggleHabit: (id: string, date?: string) => void;
-  reorderHabits: (habits: Habit[]) => void;
+  refreshData: () => Promise<void>;
+  addHabit: (data: HabitFormData) => Promise<void>;
+  updateHabit: (id: string, data: HabitFormData) => Promise<void>;
+  deleteHabit: (id: string) => Promise<void>;
+  toggleHabit: (id: string, date?: string) => Promise<void>;
+  reorderHabits: (habits: Habit[]) => Promise<void>;
   setFilters: (filters: Partial<FilterState>) => void;
   resetFilters: () => void;
-  importData: (habits: Habit[]) => void;
+  importData: (habits: Habit[], replace?: boolean) => Promise<void>;
+  resetData: () => Promise<void>;
   getFilteredHabits: () => Habit[];
   getTodayStatus: (id: string) => boolean | null;
 }
 
 const HabitContext = createContext<HabitContextType | null>(null);
 
+const getErrorMessage = (error: unknown): string => {
+  return error instanceof Error ? error.message : 'Unable to save your changes. Please try again.';
+};
+
 export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(habitReducer, {
     habits: [],
     filters: initialFilters,
+    loading: true,
+    saving: false,
+    error: null,
+    settings: { theme: 'light' },
   });
 
-  useEffect(() => {
-    const saved = loadHabits();
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-      dispatch({ type: 'SET_HABITS', payload: saved as Habit[] });
-    } else {
-      const demo = createDemoHabits();
-      dispatch({ type: 'SET_HABITS', payload: demo });
+  const loadState = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      let appState = await api.getState();
+      const legacyHabits = loadLegacyHabits();
+
+      if (
+        appState.habits.length === 0 &&
+        Array.isArray(legacyHabits) &&
+        legacyHabits.length > 0 &&
+        !hasCompletedMongoMigration()
+      ) {
+        const migrated = await api.importHabits(legacyHabits as Habit[], false);
+        appState = migrated.state;
+        markMongoMigrationComplete();
+        clearLegacyHabits();
+      }
+
+      dispatch({ type: 'SET_APP_STATE', payload: appState });
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(error) });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   }, []);
 
   useEffect(() => {
-    saveHabits(state.habits);
-  }, [state.habits]);
+    void loadState();
+  }, [loadState]);
+
+  const persist = useCallback(async (operation: () => Promise<{ state: PersistedAppState }>) => {
+    dispatch({ type: 'SET_SAVING', payload: true });
+    try {
+      const result = await operation();
+      dispatch({ type: 'SET_APP_STATE', payload: result.state });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      dispatch({ type: 'SET_ERROR', payload: message });
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_SAVING', payload: false });
+    }
+  }, []);
 
   const addHabit = useCallback((data: HabitFormData) => {
-    const habit: Habit = {
-      id: generateId(),
-      ...data,
-      createdAt: getToday(),
-      history: [],
-      order: state.habits.length,
-    };
-    dispatch({ type: 'ADD_HABIT', payload: habit });
-  }, [state.habits.length]);
+    return persist(() => api.createHabit(data));
+  }, [persist]);
 
   const updateHabit = useCallback((id: string, data: HabitFormData) => {
-    const existing = state.habits.find((h) => h.id === id);
-    if (!existing) return;
-    const updated: Habit = { ...existing, ...data };
-    dispatch({ type: 'UPDATE_HABIT', payload: updated });
-  }, [state.habits]);
+    return persist(() => api.updateHabit(id, data));
+  }, [persist]);
 
   const deleteHabit = useCallback((id: string) => {
-    dispatch({ type: 'DELETE_HABIT', payload: id });
-  }, []);
+    return persist(() => api.deleteHabit(id));
+  }, [persist]);
 
   const toggleHabit = useCallback((id: string, date?: string) => {
-    dispatch({ type: 'TOGGLE_HABIT', payload: { id, date: date || getToday() } });
-  }, []);
+    return persist(() => api.toggleHabit(id, date || getToday()));
+  }, [persist]);
 
   const reorderHabits = useCallback((habits: Habit[]) => {
-    dispatch({ type: 'REORDER_HABITS', payload: habits });
-  }, []);
+    return persist(() => api.reorderHabits(habits));
+  }, [persist]);
 
   const setFilters = useCallback((filters: Partial<FilterState>) => {
     dispatch({ type: 'SET_FILTERS', payload: filters });
@@ -147,9 +176,13 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     dispatch({ type: 'RESET_FILTERS' });
   }, []);
 
-  const importData = useCallback((habits: Habit[]) => {
-    dispatch({ type: 'IMPORT_DATA', payload: habits });
-  }, []);
+  const importData = useCallback((habits: Habit[], replace = false) => {
+    return persist(() => api.importHabits(habits, replace));
+  }, [persist]);
+
+  const resetData = useCallback(() => {
+    return persist(() => api.resetData());
+  }, [persist]);
 
   const getFilteredHabits = useCallback((): Habit[] => {
     let result = [...state.habits];
@@ -196,6 +229,7 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <HabitContext.Provider
       value={{
         state,
+        refreshData: loadState,
         addHabit,
         updateHabit,
         deleteHabit,
@@ -204,6 +238,7 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setFilters,
         resetFilters,
         importData,
+        resetData,
         getFilteredHabits,
         getTodayStatus,
       }}

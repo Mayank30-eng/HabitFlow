@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { saveTheme, loadTheme } from '../utils/storage';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { api } from '../utils/api';
 
 type Theme = 'light' | 'dark';
 
@@ -15,8 +15,6 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = loadTheme();
-    if (saved) return saved;
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';
     }
@@ -24,7 +22,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   useEffect(() => {
-    saveTheme(theme);
+    let active = true;
+    api.getSettings()
+      .then((settings) => {
+        if (active) setTheme(settings.theme);
+      })
+      .catch(() => {
+        // HabitContext surfaces the user-facing database status.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -32,9 +44,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      void api.updateSettings({ theme: next }).catch(() => {
+        // The visual preference is applied immediately; the app banner handles database failures.
+      });
+      return next;
+    });
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

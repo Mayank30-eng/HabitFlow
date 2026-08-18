@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Filter, RotateCcw } from 'lucide-react';
+import { Plus, Filter, RotateCcw, Search } from 'lucide-react';
 import { useHabits } from '../contexts/HabitContext';
 import { useToast } from '../contexts/ToastContext';
 import HabitCard from '../components/common/HabitCard';
@@ -104,6 +104,26 @@ const AllHabits: React.FC = () => {
             Add Habit
           </button>
         </div>
+      </div>
+
+      {/* Search */}
+      <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 gap-3 shadow-sm">
+        <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+        <input
+          type="text"
+          placeholder="Search habits by name..."
+          value={filters.searchQuery || ''}
+          onChange={(e) => setFilters({ searchQuery: e.target.value })}
+          className="flex-1 bg-transparent text-sm outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
+        />
+        {filters.searchQuery && (
+          <button
+            onClick={() => setFilters({ searchQuery: '' })}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors text-xs"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Filters */}

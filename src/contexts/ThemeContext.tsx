@@ -13,8 +13,14 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
 });
 
+const THEME_STORAGE_KEY = 'habit-tracker-theme';
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
+    // 1. Try persisted local preference first (instant, no flash)
+    const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
+    if (stored === 'light' || stored === 'dark') return stored;
+    // 2. Fall back to system preference
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';
     }
@@ -27,7 +33,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     api.getSettings()
       .then((settings) => {
-        if (active) setTheme(settings.theme);
+        if (active) {
+          setTheme(settings.theme);
+          localStorage.setItem(THEME_STORAGE_KEY, settings.theme);
+        }
       })
       .catch(() => {
         // HabitContext surfaces the user-facing database status.
@@ -49,6 +58,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {
       const next = prev === 'light' ? 'dark' : 'light';
+      // Persist locally immediately so it survives page reload regardless of API result
+      localStorage.setItem(THEME_STORAGE_KEY, next);
       void api.updateSettings({ theme: next }).catch(() => {
         // The visual preference is applied immediately; the app banner handles database failures.
       });

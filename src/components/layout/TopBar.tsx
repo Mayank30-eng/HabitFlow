@@ -1,14 +1,12 @@
 import React from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Sun, Moon, Search, User } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
 
 interface TopBarProps {
   onMenuClick: () => void;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ onMenuClick, searchQuery, onSearchChange }) => {
+const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
   const { theme, toggleTheme } = useTheme();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -30,16 +28,6 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick, searchQuery, onSearchChang
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <div className="hidden md:flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2 gap-2">
-          <Search className="w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search habits..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="bg-transparent text-sm outline-none w-48 text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
-          />
-        </div>
         <button
           onClick={toggleTheme}
           className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
@@ -47,9 +35,6 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick, searchQuery, onSearchChang
         >
           {theme === 'light' ? <Moon className="w-5 h-5 text-slate-600" /> : <Sun className="w-5 h-5 text-slate-300" />}
         </button>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
-          <User className="w-4 h-4 text-white" />
-        </div>
       </div>
     </header>
   );

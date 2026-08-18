@@ -8,11 +8,7 @@ import LoadingSkeleton from '../common/LoadingSkeleton';
 
 const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { setFilters, state } = useHabits();
-
-  const handleSearch = (q: string) => {
-    setFilters({ searchQuery: q });
-  };
+  const { state } = useHabits();
 
   return (
     <div className="min-h-[100dvh] bg-bg-light dark:bg-bg-dark text-slate-900 dark:text-slate-100 flex">
@@ -51,8 +47,6 @@ const Layout: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar
           onMenuClick={() => setMobileOpen(true)}
-          searchQuery={state.filters.searchQuery || ''}
-          onSearchChange={handleSearch}
         />
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           <motion.div

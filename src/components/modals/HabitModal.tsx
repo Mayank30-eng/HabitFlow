@@ -35,10 +35,16 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
     setErrors({});
   }, [initialData, isOpen]);
 
+  const today = formatDate(new Date());
+
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = 'Name is required';
-    if (!form.startDate) errs.startDate = 'Start date is required';
+    if (!form.startDate) {
+      errs.startDate = 'Start date is required';
+    } else if (!initialData && form.startDate < today) {
+      errs.startDate = 'Start date cannot be in the past';
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -165,9 +171,11 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
           <input
             type="date"
             value={form.startDate}
+            min={!initialData ? today : undefined}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
             className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 outline-none"
           />
+          {errors.startDate && <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>}
         </div>
 
         <div className="flex gap-3 pt-2">

@@ -37,7 +37,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         <div className="flex gap-3 w-full">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             {cancelText}
           </button>
@@ -46,7 +46,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
               onConfirm();
               onClose();
             }}
-            className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-colors ${
+            className={`flex-1 px-4 py-2.5 rounded-xl font-medium text-white transition-colors ${
               variant === 'danger'
                 ? 'bg-red-500 hover:bg-red-600'
                 : 'bg-amber-500 hover:bg-amber-600'

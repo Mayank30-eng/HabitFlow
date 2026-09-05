@@ -68,6 +68,8 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  const inputClass = "w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-elevated-dark text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none transition-all";
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="max-w-md">
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -77,7 +79,7 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
             type="text"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+            className={inputClass}
             placeholder="e.g., Morning Workout"
           />
           {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
@@ -89,7 +91,7 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
             <select
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 outline-none"
+              className={inputClass}
             >
               {categories.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -104,12 +106,12 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
                   key={t}
                   type="button"
                   onClick={() => setForm({ ...form, type: t })}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                  className={`flex-1 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
                     form.type === t
                       ? t === 'good'
                         ? 'bg-green-500 text-white border-green-500'
                         : 'bg-red-500 text-white border-red-500'
-                      : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'
+                      : 'bg-white dark:bg-elevated-dark border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   {t === 'good' ? 'Good Habit' : 'Bad Habit'}
@@ -124,7 +126,7 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
           <select
             value={form.frequency}
             onChange={(e) => setForm({ ...form, frequency: e.target.value as 'daily' | 'weekly' | 'custom' })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 outline-none"
+            className={inputClass}
           >
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
@@ -141,10 +143,10 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
                   key={i}
                   type="button"
                   onClick={() => toggleDay(i)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${
+                  className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-all ${
                     form.customDays.includes(i)
                       ? 'bg-green-500 text-white border-green-500'
-                      : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400'
+                      : 'bg-white dark:bg-elevated-dark border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
                   }`}
                 >
                   {form.customDays.includes(i) && <Check className="w-3 h-3 mx-auto mb-0.5" />}
@@ -161,7 +163,7 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 outline-none resize-none"
+            className={`${inputClass} resize-none`}
             placeholder="Optional description..."
           />
         </div>
@@ -173,7 +175,7 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
             value={form.startDate}
             min={!initialData ? today : undefined}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 outline-none"
+            className={inputClass}
           />
           {errors.startDate && <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>}
         </div>
@@ -182,13 +184,13 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="flex-1 px-4 py-2.5 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-white font-medium hover:bg-primary-hover transition-colors"
           >
             Save Habit
           </button>

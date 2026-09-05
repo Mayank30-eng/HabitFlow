@@ -39,6 +39,7 @@ const Layout: React.FC = () => {
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 lg:hidden"
               onClick={() => setMobileOpen(false)}
+              aria-hidden="true"
             />
             <motion.div
               initial={{ x: -264 }}
@@ -64,17 +65,24 @@ const Layout: React.FC = () => {
             className="max-w-7xl mx-auto space-y-4"
           >
             {state.error && (
-              <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-300 shadow-xs">
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-300 shadow-xs"
+              >
                 {state.error}
               </div>
             )}
             {state.saving && (
-              <div className="rounded-xl border border-primary/20 dark:border-primary/30 bg-primary/5 dark:bg-primary/10 px-4 py-3 text-sm text-primary dark:text-primary-light shadow-xs">
+              <div
+                role="status"
+                aria-live="polite"
+                className="rounded-xl border border-primary/20 dark:border-primary/30 bg-primary/5 dark:bg-primary/10 px-4 py-3 text-sm text-primary dark:text-primary-light shadow-xs"
+              >
                 Saving changes...
               </div>
             )}
             {state.loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3" aria-busy="true">
                 <LoadingSkeleton count={4} />
               </div>
             ) : (
@@ -87,7 +95,7 @@ const Layout: React.FC = () => {
       {/* Mobile Bottom Navigation */}
       <nav
         aria-label="Mobile Navigation"
-        className="fixed bottom-0 left-0 right-0 z-30 bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 px-2 py-1.5 flex items-center justify-around lg:hidden transition-colors"
+        className="fixed bottom-0 left-0 right-0 z-30 bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 px-2 py-1 flex items-center justify-around lg:hidden transition-colors"
       >
         {navItems.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -96,9 +104,11 @@ const Layout: React.FC = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-[11px] transition-all relative ${
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
+              className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl text-[11px] transition-all min-w-[56px] min-h-[44px] relative ${
                 isActive
-                  ? 'text-primary dark:text-primary-light font-semibold'
+                  ? 'text-primary dark:text-primary-light font-bold'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
               }`}
             >

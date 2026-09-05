@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Sun, Moon, Download, Upload, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Sun, Moon, Download, Upload, Trash2, Database, Layers, CheckCircle2, Shield, Info, ChevronRight
+} from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useHabits } from '../contexts/HabitContext';
 import { useToast } from '../contexts/ToastContext';
@@ -37,7 +39,7 @@ const Settings: React.FC = () => {
         setImportText('');
         setShowImport(false);
       } else {
-        showToast('Invalid data format', 'error');
+        showToast('Invalid data format: Expected habit list', 'error');
       }
     } catch {
       showToast('Invalid JSON format', 'error');
@@ -47,138 +49,295 @@ const Settings: React.FC = () => {
   const handleReset = async () => {
     try {
       await resetData();
-      showToast('All data reset', 'success');
+      showToast('All habit data reset successfully', 'success');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Unable to reset data', 'error');
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
+  const totalRecords = state.habits.reduce((acc, h) => acc + h.history.length, 0);
+  const goodHabitsCount = state.habits.filter((h) => h.type === 'good').length;
+  const badHabitsCount = state.habits.filter((h) => h.type === 'bad').length;
 
-      {/* Appearance */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Appearance</h2>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {theme === 'light' ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-blue-400" />}
-            <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Theme</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{theme === 'light' ? 'Light mode' : 'Dark mode'}</p>
-            </div>
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">
+          Settings
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-1.5">
+          Customize interface appearance, manage data backups, and inspect app metrics
+        </p>
+      </div>
+
+      {/* Appearance Section */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            {theme === 'light' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+              Interface Appearance
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Toggle between clean light mode and immersive dark mode
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 pt-2">
           <button
-            onClick={toggleTheme}
-            className="relative w-12 h-7 rounded-full bg-slate-200 dark:bg-slate-700 transition-colors"
+            onClick={() => theme === 'dark' && toggleTheme()}
+            type="button"
+            className={`p-4 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+              theme === 'light'
+                ? 'bg-primary/5 border-primary shadow-xs'
+                : 'bg-slate-50 dark:bg-elevated-dark border-slate-200/70 dark:border-slate-800/70 hover:border-slate-300 dark:hover:border-slate-700'
+            }`}
           >
-            <motion.div
-              className="absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md"
-              animate={{ x: theme === 'dark' ? 18 : 0 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            />
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-100 text-amber-600">
+                <Sun className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Light Mode</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Bright & crisp</p>
+              </div>
+            </div>
+            {theme === 'light' && (
+              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+            )}
+          </button>
+
+          <button
+            onClick={() => theme === 'light' && toggleTheme()}
+            type="button"
+            className={`p-4 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+              theme === 'dark'
+                ? 'bg-primary/10 border-primary shadow-xs'
+                : 'bg-slate-50 dark:bg-elevated-dark border-slate-200/70 dark:border-slate-800/70 hover:border-slate-300 dark:hover:border-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-indigo-950 text-indigo-400">
+                <Moon className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Dark Mode</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Deep & focused</p>
+              </div>
+            </div>
+            {theme === 'dark' && (
+              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Data Management */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Data Management</h2>
-        <div className="space-y-3">
+      {/* Data Management Section */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/10 text-primary dark:text-primary-light border border-primary/20">
+            <Database className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+              Data Management & Backup
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Export your records for safekeeping, restore backups, or reset data
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3 pt-2">
+          {/* Export Button */}
           <button
             onClick={handleExport}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left"
+            type="button"
+            className="w-full flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-elevated-dark border border-slate-200/70 dark:border-slate-800/70 hover:border-primary/40 dark:hover:border-primary/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-all cursor-pointer group"
           >
-            <Download className="w-5 h-5 text-green-500" />
-            <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Export Data</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Download your habits as JSON</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setShowImport(!showImport)}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left"
-          >
-            <Upload className="w-5 h-5 text-blue-500" />
-            <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Import Data</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Restore habits from JSON</p>
-            </div>
-          </button>
-
-          {showImport && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="space-y-2"
-            >
-              <textarea
-                value={importText}
-                onChange={(e) => setImportText(e.target.value)}
-                rows={4}
-                placeholder="Paste your JSON data here..."
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm font-mono text-slate-900 dark:text-slate-100"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleImport}
-                  className="px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"
-                >
-                  Import
-                </button>
-                <button
-                  onClick={() => { setShowImport(false); setImportText(''); }}
-                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm text-slate-700 dark:text-slate-300"
-                >
-                  Cancel
-                </button>
+            <div className="flex items-center gap-3.5">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <Download className="w-4 h-4" />
               </div>
-            </motion.div>
-          )}
+              <div className="text-left">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
+                  Export Habit Data
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Download all active habits and completion logs as a JSON file
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+          </button>
 
+          {/* Import Button & Expandable Drawer */}
+          <div className="rounded-xl border border-slate-200/70 dark:border-slate-800/70 bg-slate-50 dark:bg-elevated-dark overflow-hidden transition-all">
+            <button
+              onClick={() => setShowImport(!showImport)}
+              type="button"
+              className="w-full flex items-center justify-between p-4 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  <Upload className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
+                    Import Habit Data
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Restore habits and history logs from a previously exported JSON backup
+                  </p>
+                </div>
+              </div>
+              <ChevronRight
+                className={`w-4 h-4 text-slate-400 transition-transform ${
+                  showImport ? 'rotate-90' : ''
+                }`}
+              />
+            </button>
+
+            <AnimatePresence>
+              {showImport && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-4 pb-4 pt-1 border-t border-slate-200/60 dark:border-slate-800/60 space-y-3"
+                >
+                  <textarea
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                    rows={4}
+                    placeholder="Paste your exported JSON data here..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-dark text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleImport}
+                      type="button"
+                      disabled={!importText.trim()}
+                      className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                    >
+                      Import Now
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowImport(false);
+                        setImportText('');
+                      }}
+                      type="button"
+                      className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Reset All Data Button */}
           <button
             onClick={() => setConfirmResetOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-left"
+            type="button"
+            className="w-full flex items-center justify-between p-4 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 hover:border-rose-300 dark:hover:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all cursor-pointer group"
           >
-            <Trash2 className="w-5 h-5 text-red-500" />
-            <div>
-              <p className="text-sm font-medium text-red-700 dark:text-red-400">Reset All Data</p>
-              <p className="text-xs text-red-500 dark:text-red-400">Clear all habits and history</p>
+            <div className="flex items-center gap-3.5">
+              <div className="p-2 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                <Trash2 className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-rose-700 dark:text-rose-400">
+                  Reset All Data
+                </p>
+                <p className="text-xs text-rose-500/80 dark:text-rose-400/80">
+                  Permanently clear all habits, check-ins, and activity logs
+                </p>
+              </div>
             </div>
+            <span className="text-xs font-bold text-rose-600 dark:text-rose-400 px-3 py-1 rounded-lg border border-rose-200 dark:border-rose-900/60 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/40 transition-colors">
+              Reset
+            </span>
           </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">App Stats</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{state.habits.length}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Total Habits</div>
-          </div>
-          <div className="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {state.habits.filter((h) => h.type === 'good').length}
+      {/* App Stats Section */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs space-y-4">
+        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+          Application Overview
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-elevated-dark border border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 mb-1">
+              <Layers className="w-4 h-4 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-wider">Total</span>
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Good Habits</div>
-          </div>
-          <div className="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-              {state.habits.filter((h) => h.type === 'bad').length}
+            <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-50">
+              {state.habits.length}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Bad Habits</div>
-          </div>
-          <div className="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {state.habits.reduce((acc, h) => acc + h.history.length, 0)}
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+              Configured habits
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Total Records</div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-elevated-dark border border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 mb-1">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span className="text-xs font-semibold uppercase tracking-wider">Good</span>
+            </div>
+            <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+              {goodHabitsCount}
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+              Habits to build
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-elevated-dark border border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 mb-1">
+              <Shield className="w-4 h-4 text-rose-500" />
+              <span className="text-xs font-semibold uppercase tracking-wider">Bad</span>
+            </div>
+            <div className="text-2xl font-extrabold text-rose-600 dark:text-rose-400">
+              {badHabitsCount}
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+              Habits to break
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-elevated-dark border border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 mb-1">
+              <Database className="w-4 h-4 text-purple-500" />
+              <span className="text-xs font-semibold uppercase tracking-wider">Logs</span>
+            </div>
+            <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-50">
+              {totalRecords}
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+              Recorded entries
+            </div>
           </div>
         </div>
       </div>
 
+      {/* App Information Card */}
+      <div className="p-4 rounded-xl bg-slate-50 dark:bg-elevated-dark/50 border border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-2">
+          <Info className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <span>HabitFlow v1.0 • Client sync & local persistence enabled</span>
+        </div>
+        <span className="font-semibold text-slate-600 dark:text-slate-300">Production Ready</span>
+      </div>
+
+      {/* Confirmation Modal */}
       <ConfirmModal
         isOpen={confirmResetOpen}
         onClose={() => setConfirmResetOpen(false)}

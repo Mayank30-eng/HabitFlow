@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ListChecks, Flame, Target, TrendingUp, Zap, Shield, Activity,
-  Plus, ChevronRight
+  Flame, Target, TrendingUp, Zap, Shield, Activity,
+  Plus, ChevronRight, CheckCircle2, Clock, Sparkles
 } from 'lucide-react';
 import { useHabits } from '../contexts/HabitContext';
 import { useToast } from '../contexts/ToastContext';
@@ -12,6 +12,7 @@ import HabitModal from '../components/modals/HabitModal';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import CalendarHeatmap from '../components/common/CalendarHeatmap';
 import EmptyState from '../components/common/EmptyState';
+import CircularProgress from '../components/common/CircularProgress';
 import {
   calculateOverallSuccessRate, calculateGrowthScore, getOverallStatus, getGoodVsBadStats,
   getGoodHabitDashboardStats, getBadHabitDashboardStats
@@ -26,6 +27,7 @@ const Dashboard: React.FC = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<string | null>(null);
   const [deletingHabit, setDeletingHabit] = useState<string | null>(null);
+  const [habitFilter, setHabitFilter] = useState<'all' | 'good' | 'bad'>('all');
 
   const habits = state.habits;
   const today = getToday();
@@ -45,8 +47,11 @@ const Dashboard: React.FC = () => {
   }, [habits]);
 
   const recentHabits = useMemo(() => {
-    return habits.slice(0, 6);
-  }, [habits]);
+    let filtered = habits;
+    if (habitFilter === 'good') filtered = habits.filter(h => h.type === 'good');
+    else if (habitFilter === 'bad') filtered = habits.filter(h => h.type === 'bad');
+    return filtered.slice(0, 6);
+  }, [habits, habitFilter]);
 
   const recentActivity = useMemo(() => {
     const activity = [];
@@ -119,91 +124,158 @@ const Dashboard: React.FC = () => {
   };
 
   const editingHabitData = editingHabit ? habits.find((h) => h.id === editingHabit) : undefined;
+  const todayCompletionRate = stats.good.totalGood > 0 ? Math.round((stats.good.completedToday / stats.good.totalGood) * 100) : 0;
 
   return (
     <div className="space-y-6">
-      {/* Overview Stats */}
+      {/* Hero: Today's Focus Card */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-surface-light via-surface-light to-elevated-light dark:from-surface-dark dark:via-surface-dark dark:to-elevated-dark rounded-3xl border border-slate-200/80 dark:border-slate-800/80 p-6 sm:p-8 shadow-xs">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Today's Focus</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              {todayCompletionRate === 100 && stats.good.totalGood > 0
+                ? 'All good habits completed! 🎉'
+                : todayCompletionRate > 0
+                ? `${stats.good.completedToday} of ${stats.good.totalGood} completed today`
+                : 'Ready to build momentum today?'}
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              {todayCompletionRate === 100 && stats.good.totalGood > 0
+                ? 'Fantastic work! You have hit 100% of your good habits today.'
+                : stats.good.totalGood > 0
+                ? `You have completed ${stats.good.completedToday} out of ${stats.good.totalGood} good habits. Stay consistent to keep your streaks alive!`
+                : 'Get started by creating your first habit to track your daily progress.'}
+            </p>
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold shadow-xs shadow-primary/25 transition-all active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                Add New Habit
+              </button>
+              <Link
+                to="/habits"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold transition-colors"
+              >
+                Manage All
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Progress Ring & Mini Indicators */}
+          <div className="flex items-center gap-6 self-center md:self-auto bg-slate-50/80 dark:bg-elevated-dark/80 backdrop-blur-xs p-4 sm:p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 flex-shrink-0">
+            <CircularProgress
+              value={todayCompletionRate}
+              size={100}
+              strokeWidth={9}
+              color="primary"
+              sublabel="Today"
+            />
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                <span>Completed: <strong className="text-slate-900 dark:text-slate-100">{stats.completed}</strong></span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <span>Pending: <strong className="text-slate-900 dark:text-slate-100">{stats.pending}</strong></span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                <Shield className="w-4 h-4 text-primary flex-shrink-0" />
+                <span>Bad Avoided: <strong className="text-slate-900 dark:text-slate-100">{stats.badAvoided}/{stats.badTotal}</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Primary 4 Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Habits" value={stats.total} icon={<ListChecks className="w-5 h-5" />} color="blue" />
-        <StatCard title="Overall Success" value={`${stats.successRate}%`} icon={<TrendingUp className="w-5 h-5" />} color="purple" trend={stats.growth >= 0 ? 'up' : 'down'} trendValue={`${stats.growth > 0 ? '+' : ''}${stats.growth}%`} />
-        <StatCard title="Growth Score" value={`${stats.growth > 0 ? '+' : ''}${stats.growth}%`} icon={<Activity className="w-5 h-5" />} color="green" trend={stats.growth >= 0 ? 'up' : 'down'} trendValue="vs last month" />
-        <StatCard title="Good Completed Today" value={`${stats.good.completedToday}/${stats.good.totalGood}`} icon={<Target className="w-5 h-5" />} color="green" />
+        <StatCard
+          title="Today's Habits"
+          value={`${stats.good.completedToday}/${stats.good.totalGood}`}
+          icon={<Target className="w-5 h-5" />}
+          color="green"
+          subtitle={`${todayCompletionRate}% completed`}
+        />
+        <StatCard
+          title="Current Streak"
+          value={stats.good.currentStreak}
+          icon={<Flame className="w-5 h-5" />}
+          color="amber"
+          subtitle={`Best: ${stats.good.longestStreak} days`}
+        />
+        <StatCard
+          title="Overall Success"
+          value={`${stats.successRate}%`}
+          icon={<TrendingUp className="w-5 h-5" />}
+          color="purple"
+          trend={stats.growth >= 0 ? 'up' : 'down'}
+          trendValue={`${stats.growth > 0 ? '+' : ''}${stats.growth}%`}
+          subtitle="Monthly trend"
+        />
+        <StatCard
+          title="Bad Habits Avoided"
+          value={`${stats.badAvoided}/${stats.badTotal}`}
+          icon={<Shield className="w-5 h-5" />}
+          color="blue"
+          subtitle={`Best streak: ${stats.bad.bestAvoidanceStreak}d`}
+        />
       </div>
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Good Habits</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard title="Completion Rate" value={`${stats.good.completionRate}%`} icon={<Target className="w-5 h-5" />} color="green" />
-          <StatCard title="Current Streak" value={stats.good.currentStreak} icon={<Flame className="w-5 h-5" />} color="amber" subtitle="days" />
-          <StatCard title="Longest Streak" value={stats.good.longestStreak} icon={<Zap className="w-5 h-5" />} color="amber" subtitle="days" />
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Bad Habits</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Avoidance Streak" value={stats.bad.bestAvoidanceStreak} icon={<Shield className="w-5 h-5" />} color="green" subtitle="best current" />
-          <StatCard title="Relapse Count" value={stats.bad.totalRelapses} icon={<Activity className="w-5 h-5" />} color="red" />
-          <StatCard title="Occurrences This Week" value={stats.bad.occurrencesThisWeek} icon={<Flame className="w-5 h-5" />} color="red" />
-          <StatCard title="Occurrences This Month" value={stats.bad.occurrencesThisMonth} icon={<TrendingUp className="w-5 h-5" />} color="red" />
-        </div>
-      </div>
-
-      {/* Heatmap + Habits */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Activity Heatmap</h2>
-            <Link to="/analytics" className="text-sm text-green-600 dark:text-green-400 hover:underline">View all</Link>
+      {/* Habits Section */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+              Today's Habits
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Check off your accomplishments and maintain your momentum
+            </p>
           </div>
-          <CalendarHeatmap habits={habits} days={180} />
-        </div>
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Today's Status</h2>
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Good Habits</p>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 dark:text-slate-300">Completed</span>
-              <span className="text-sm font-semibold text-green-600">{stats.completed}</span>
-            </div>
-            <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-green-500 rounded-full" style={{ width: `${stats.good.totalGood > 0 ? (stats.completed / stats.good.totalGood) * 100 : 0}%` }} />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 dark:text-slate-300">Missed</span>
-              <span className="text-sm font-semibold text-red-600">{stats.missed}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 dark:text-slate-300">Pending</span>
-              <span className="text-sm font-semibold text-amber-600">{stats.pending}</span>
-            </div>
-            <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Bad Habits</p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-300">Avoided</span>
-                <span className="text-sm font-semibold text-green-600">{stats.badAvoided}/{stats.badTotal}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-300">Occurred</span>
-                <span className="text-sm font-semibold text-red-600">{stats.badPerformed}</span>
-              </div>
-            </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl self-start sm:self-auto">
+            <button
+              onClick={() => setHabitFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                habitFilter === 'all'
+                  ? 'bg-surface-light dark:bg-surface-dark text-slate-900 dark:text-slate-50 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              All ({habits.length})
+            </button>
+            <button
+              onClick={() => setHabitFilter('good')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                habitFilter === 'good'
+                  ? 'bg-surface-light dark:bg-surface-dark text-slate-900 dark:text-slate-50 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              Good ({stats.good.totalGood})
+            </button>
+            <button
+              onClick={() => setHabitFilter('bad')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                habitFilter === 'bad'
+                  ? 'bg-surface-light dark:bg-surface-dark text-slate-900 dark:text-slate-50 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              Bad ({stats.badTotal})
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Habits List */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Your Habits</h2>
-          <button
-            onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Habit
-          </button>
-        </div>
         {habits.length === 0 ? (
           <EmptyState
             title="No habits yet"
@@ -211,14 +283,18 @@ const Dashboard: React.FC = () => {
             action={
               <button
                 onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }}
-                className="px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"
+                className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover shadow-xs transition-colors cursor-pointer"
               >
                 Add First Habit
               </button>
             }
           />
+        ) : recentHabits.length === 0 ? (
+          <div className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+            No habits found in this filter category.
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {recentHabits.map((habit, i) => (
               <HabitCard
                 key={habit.id}
@@ -231,33 +307,161 @@ const Dashboard: React.FC = () => {
             ))}
           </div>
         )}
+
         {habits.length > 6 && (
-          <Link to="/habits" className="flex items-center justify-center gap-1 mt-4 text-sm text-green-600 dark:text-green-400 hover:underline">
-            View all {habits.length} habits <ChevronRight className="w-4 h-4" />
-          </Link>
+          <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-center">
+            <Link
+              to="/habits"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary dark:text-primary-light hover:underline"
+            >
+              View all {habits.length} habits <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
         )}
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Recent Activity</h2>
+      {/* Heatmap & Today's Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                Activity Heatmap
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Consistency over the last 180 days
+              </p>
+            </div>
+            <Link
+              to="/analytics"
+              className="text-xs font-semibold text-primary dark:text-primary-light hover:underline flex items-center gap-1"
+            >
+              View analytics <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <CalendarHeatmap habits={habits} days={180} />
+        </div>
+
+        {/* Today's Status Breakdown */}
+        <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight mb-1">
+              Today's Status
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Real-time daily status tracker
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+                  <span>Good Habits</span>
+                  <span className="text-slate-700 dark:text-slate-300 font-bold">{stats.completed}/{stats.good.totalGood}</span>
+                </div>
+                <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                    style={{ width: `${stats.good.totalGood > 0 ? (stats.completed / stats.good.totalGood) * 100 : 0}%` }}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                  <div className="p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-500/15">
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium block">Done</span>
+                    <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{stats.completed}</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-500/15">
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium block">Pending</span>
+                    <span className="text-sm font-bold text-amber-700 dark:text-amber-300">{stats.pending}</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-500/15">
+                    <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium block">Missed</span>
+                    <span className="text-sm font-bold text-rose-700 dark:text-rose-300">{stats.missed}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+                  <span>Bad Habits</span>
+                  <span className="text-slate-700 dark:text-slate-300 font-bold">{stats.badAvoided}/{stats.badTotal}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2 text-center">
+                  <div className="p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-500/15">
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium block">Avoided</span>
+                    <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{stats.badAvoided}</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-500/15">
+                    <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium block">Relapses</span>
+                    <span className="text-sm font-bold text-rose-700 dark:text-rose-300">{stats.badPerformed}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary Detailed Habit Analytics */}
+      <div className="space-y-4">
+        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+          Performance Breakdown
+        </h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Good Habit Rate"
+            value={`${stats.good.completionRate}%`}
+            icon={<Target className="w-5 h-5" />}
+            color="green"
+            subtitle="Overall 30-day average"
+          />
+          <StatCard
+            title="Longest Good Streak"
+            value={stats.good.longestStreak}
+            icon={<Zap className="w-5 h-5" />}
+            color="amber"
+            subtitle="All-time record"
+          />
+          <StatCard
+            title="Relapses This Week"
+            value={stats.bad.occurrencesThisWeek}
+            icon={<Flame className="w-5 h-5" />}
+            color="red"
+            subtitle="Bad habit triggers"
+          />
+          <StatCard
+            title="Relapses This Month"
+            value={stats.bad.occurrencesThisMonth}
+            icon={<Activity className="w-5 h-5" />}
+            color="red"
+            subtitle={`Total: ${stats.bad.totalRelapses} all-time`}
+          />
+        </div>
+      </div>
+
+      {/* Recent Activity Timeline */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs">
+        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight mb-4">
+          Recent Activity Timeline
+        </h3>
         {recentActivity.length === 0 ? (
-          <EmptyState title="No recent activity" description="Track some habits to see activity here." />
+          <EmptyState title="No recent activity" description="Track some habits to see activity history here." />
         ) : (
           <div className="space-y-3">
             {recentActivity.map((day) => (
-              <div key={day.date} className="flex items-start gap-3">
-                <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${day.badHabits.length > 0 ? 'bg-red-500' : 'bg-green-500'}`} />
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{day.date}</p>
+              <div key={day.date} className="flex items-start gap-3.5 p-3 rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60">
+                <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${day.badHabits.length > 0 ? 'bg-rose-500 ring-4 ring-rose-500/20' : 'bg-emerald-500 ring-4 ring-emerald-500/20'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">{day.date}</p>
                   {day.goodHabits.length > 0 && (
-                    <p className="text-sm text-slate-700 dark:text-slate-300">
-                      Completed: {day.goodHabits.map((h) => h.name).join(', ')}
+                    <p className="text-sm text-slate-800 dark:text-slate-200">
+                      <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Completed: </strong>
+                      {day.goodHabits.map((h) => h.name).join(', ')}
                     </p>
                   )}
                   {day.badHabits.length > 0 && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      Occurred: {day.badHabits.map((h) => h.name).join(', ')}
+                    <p className="text-sm text-rose-600 dark:text-rose-400 mt-0.5">
+                      <strong className="font-semibold">Occurred: </strong>
+                      {day.badHabits.map((h) => h.name).join(', ')}
                     </p>
                   )}
                 </div>

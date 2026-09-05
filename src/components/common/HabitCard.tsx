@@ -19,73 +19,123 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, onToggle, onEdit, onDelete
   const streak = calculateStreak(habit);
   const rate = calculateSuccessRate(habit, 30);
   const todayRecord = getHabitRecord(habit, getToday());
-  const isCompleted = todayRecord && todayRecord.completed;
+  const isCompleted = Boolean(todayRecord && todayRecord.completed);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-      className={`bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all duration-200 group relative overflow-hidden ${
-        habit.type === 'good' ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'
+      transition={{ delay: index * 0.04, duration: 0.25, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+      className={`bg-surface-light dark:bg-surface-dark rounded-2xl border transition-all duration-200 group relative p-4 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 ${
+        isCompleted
+          ? habit.type === 'good'
+            ? 'border-emerald-200/80 dark:border-emerald-900/40 bg-emerald-500/[0.02] dark:bg-emerald-950/[0.1]'
+            : 'border-rose-200/80 dark:border-rose-900/40 bg-rose-500/[0.02] dark:bg-rose-950/[0.1]'
+          : 'border-slate-200/80 dark:border-slate-800/80'
       }`}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0">
-          <button
-            onClick={onToggle}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-              isCompleted
-                ? habit.type === 'good'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-red-500 text-white'
-                : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
-            }`}
-          >
-            {isCompleted ? (
-              habit.type === 'good' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />
-            ) : (
-              <div className="w-4 h-4 rounded-sm border-2 border-slate-300 dark:border-slate-500" />
-            )}
-          </button>
-        </div>
+      <div className="flex items-start gap-3.5">
+        {/* Toggle Button */}
+        <button
+          onClick={onToggle}
+          type="button"
+          aria-label={
+            habit.type === 'good'
+              ? isCompleted
+                ? `Mark ${habit.name} as uncompleted`
+                : `Mark ${habit.name} as completed`
+              : isCompleted
+              ? `Remove occurrence for ${habit.name}`
+              : `Record occurrence for ${habit.name}`
+          }
+          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0 cursor-pointer ${
+            isCompleted
+              ? habit.type === 'good'
+                ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95'
+                : 'bg-rose-500 text-white shadow-xs shadow-rose-500/30 hover:bg-rose-600 active:scale-95'
+              : habit.type === 'good'
+              ? 'border-2 border-dashed border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 active:scale-95'
+              : 'border-2 border-slate-300 dark:border-slate-600 text-transparent hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-500 active:scale-95'
+          }`}
+        >
+          {isCompleted ? (
+            habit.type === 'good' ? <Check className="w-4 h-4 stroke-[3]" /> : <X className="w-4 h-4 stroke-[3]" />
+          ) : (
+            habit.type === 'good' ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : <X className="w-3.5 h-3.5 stroke-[2.5]" />
+          )}
+        </button>
+
+        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <Link to={`/habit/${habit.id}`} className="font-semibold text-slate-900 dark:text-slate-100 hover:text-green-600 dark:hover:text-green-400 transition-colors truncate">
+            <Link
+              to={`/habit/${habit.id}`}
+              className={`font-semibold text-sm sm:text-base transition-colors truncate block leading-tight ${
+                isCompleted && habit.type === 'good'
+                  ? 'text-slate-900 dark:text-slate-100 hover:text-primary dark:hover:text-primary-light'
+                  : 'text-slate-900 dark:text-slate-100 hover:text-primary dark:hover:text-primary-light'
+              }`}
+            >
               {habit.name}
             </Link>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              habit.type === 'good'
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-            }`}>
+            <span
+              className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md flex-shrink-0 ${
+                habit.type === 'good'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-rose-500/20'
+              }`}
+            >
               {habit.type === 'good' ? 'Good' : 'Bad'}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-2">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+
+          <div className="flex items-center flex-wrap gap-2.5 text-xs text-slate-500 dark:text-slate-400 mb-2.5">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
               {habit.category}
             </span>
             {streak > 0 && (
-              <span className="flex items-center gap-1 text-amber-500">
-                <Flame className="w-3 h-3" />
+              <span
+                className={`flex items-center gap-1 font-semibold px-2 py-0.5 rounded-md text-[11px] ${
+                  habit.type === 'good'
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                }`}
+              >
+                <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
                 {streak} {habit.type === 'bad' ? (streak !== 1 ? 'days avoided' : 'day avoided') : (streak !== 1 ? 'days' : 'day')}
               </span>
             )}
           </div>
-          <ProgressBar value={rate} color={habit.type === 'good' ? 'green' : 'red'} size="sm" />
+
+          {/* Progress Bar & Rate */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex-1">
+              <ProgressBar value={rate} color={habit.type === 'good' ? 'green' : 'red'} size="sm" />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0">
+              {rate}% 30d
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           <button
             onClick={onEdit}
-            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            type="button"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Edit habit"
+            aria-label="Edit habit"
           >
             <Edit2 className="w-4 h-4" />
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors"
+            type="button"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+            title="Delete habit"
+            aria-label="Delete habit"
           >
             <Trash2 className="w-4 h-4" />
           </button>

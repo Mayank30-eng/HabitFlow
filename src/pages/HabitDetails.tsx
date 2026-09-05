@@ -9,6 +9,7 @@ import HabitModal from '../components/modals/HabitModal';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import EmptyState from '../components/common/EmptyState';
 import ProgressBar from '../components/common/ProgressBar';
+import StatCard from '../components/common/StatCard';
 import {
   calculateStreak, calculateLongestStreak, calculateSuccessRate,
   calculateTotalSuccesses, calculateTimesPerformed, getHabitImpactScore,
@@ -80,11 +81,12 @@ const HabitDetails: React.FC = () => {
       <div className="py-12">
         <EmptyState
           title="Habit not found"
-          description="The habit you're looking for doesn't exist."
+          description="The habit you're looking for doesn't exist or may have been deleted."
           action={
             <button
               onClick={() => navigate('/habits')}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"
+              type="button"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Habits
@@ -115,7 +117,7 @@ const HabitDetails: React.FC = () => {
   };
 
   const todayRecord = getHabitRecord(habit, getToday());
-  const isCompleted = todayRecord && todayRecord.completed;
+  const isCompleted = Boolean(todayRecord && todayRecord.completed);
   const successLabel = habit.type === 'bad' ? 'Avoided' : 'Completed';
 
   const handleToggle = async () => {
@@ -124,8 +126,12 @@ const HabitDetails: React.FC = () => {
       await toggleHabit(habit.id);
       showToast(
         habit.type === 'good'
-          ? wasMarked ? `${habit.name} marked as missed` : `${habit.name} completed`
-          : wasMarked ? `${habit.name} occurrence removed` : `${habit.name} occurrence tracked`,
+          ? wasMarked
+            ? `${habit.name} marked as missed`
+            : `${habit.name} completed!`
+          : wasMarked
+          ? `${habit.name} occurrence removed`
+          : `${habit.name} occurrence tracked`,
         habit.type === 'bad' && !wasMarked ? 'info' : 'success'
       );
     } catch (error) {
@@ -133,12 +139,28 @@ const HabitDetails: React.FC = () => {
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
+  const CustomTooltip = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: Array<{ value: number }>;
+    label?: string;
+  }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 shadow-lg text-sm">
-          <p className="text-slate-500 dark:text-slate-400">{label}</p>
-          <p className="font-semibold text-slate-900 dark:text-slate-100">{successLabel}: {payload[0].value}</p>
+        <div className="bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 rounded-xl px-3.5 py-2.5 shadow-lg text-xs">
+          <p className="text-slate-500 dark:text-slate-400 font-medium mb-1">{label}</p>
+          <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                habit.type === 'good' ? 'bg-emerald-500' : 'bg-primary'
+              }`}
+            />
+            <span>{successLabel}:</span>
+            <span>{payload[0].value}</span>
+          </p>
         </div>
       );
     }
@@ -147,206 +169,286 @@ const HabitDetails: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      {/* Top Header Card */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
           <button
             onClick={() => navigate('/habits')}
-            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            type="button"
+            className="p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-elevated-dark text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer flex-shrink-0"
+            title="Back to All Habits"
+            aria-label="Back to All Habits"
           >
-            <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+            <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{habit.name}</h1>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                habit.type === 'good'
-                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-              }`}>
+            <div className="flex items-center flex-wrap gap-2.5 mb-1">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                {habit.name}
+              </h1>
+              <span
+                className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md ${
+                  habit.type === 'good'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                    : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-rose-500/20'
+                }`}
+              >
                 {habit.type === 'good' ? 'Good Habit' : 'Bad Habit'}
               </span>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{habit.category}</p>
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <span>{habit.category}</span>
+              <span>•</span>
+              <span className="capitalize">{habit.frequency}</span>
+              {habit.description && (
+                <>
+                  <span>•</span>
+                  <span className="truncate max-w-xs text-slate-400 dark:text-slate-500">
+                    {habit.description}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           <button
             onClick={handleToggle}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            type="button"
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer shadow-xs ${
               isCompleted
                 ? habit.type === 'good'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-red-500 text-white'
-                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/25'
+                  : 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/25'
+                : habit.type === 'good'
+                ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
             {isCompleted ? (
-              habit.type === 'good' ? <><Check className="w-4 h-4" /> Completed</> : <><X className="w-4 h-4" /> Occurred</>
+              habit.type === 'good' ? (
+                <>
+                  <Check className="w-4 h-4 stroke-[3]" /> Completed Today
+                </>
+              ) : (
+                <>
+                  <X className="w-4 h-4 stroke-[3]" /> Occurred Today
+                </>
+              )
+            ) : habit.type === 'good' ? (
+              <>
+                <Check className="w-4 h-4" /> Mark Complete
+              </>
             ) : (
-              habit.type === 'good' ? 'Mark Complete' : 'Mark Occurrence'
+              <>
+                <X className="w-4 h-4" /> Record Occurrence
+              </>
             )}
           </button>
+
           <button
             onClick={() => setHabitModalOpen(true)}
-            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            type="button"
+            className="p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-elevated-dark text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Edit habit"
+            aria-label="Edit habit"
           >
             <Edit2 className="w-4 h-4" />
           </button>
+
           <button
             onClick={() => setConfirmModalOpen(true)}
-            className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors"
+            type="button"
+            className="p-2.5 rounded-xl border border-rose-200/80 dark:border-rose-900/40 bg-slate-50 dark:bg-elevated-dark text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+            title="Delete habit"
+            aria-label="Delete habit"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Primary Key Stats */}
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <Flame className="w-5 h-5 text-amber-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">{habit.type === 'bad' ? 'Avoidance Streak' : 'Current Streak'}</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.streak}</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">{habit.type === 'bad' ? 'day streak' : 'days'}</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <Target className="w-5 h-5 text-green-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">{habit.type === 'bad' ? 'Best Avoidance' : 'Longest Streak'}</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.longest}</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">days</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-5 h-5 text-blue-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">{habit.type === 'bad' ? '30-Day Avoidance' : '30-Day Rate'}</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.rate}%</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">{habit.type === 'bad' ? 'avoidance' : 'completion'}</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <CalendarDays className="w-5 h-5 text-purple-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">{habit.type === 'bad' ? 'Total Avoided' : 'Total'}</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.totalSuccesses}</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">
-              {habit.type === 'bad' ? `${stats.timesPerformed} times slipped` : 'completions'}
-            </div>
-          </div>
+          <StatCard
+            title={habit.type === 'bad' ? 'Avoidance Streak' : 'Current Streak'}
+            value={stats.streak}
+            icon={<Flame className="w-5 h-5" />}
+            color="amber"
+            subtitle={habit.type === 'bad' ? 'Consecutive days' : 'Consecutive days'}
+          />
+          <StatCard
+            title={habit.type === 'bad' ? 'Best Avoidance' : 'Longest Streak'}
+            value={stats.longest}
+            icon={<Target className="w-5 h-5" />}
+            color="green"
+            subtitle="All-time personal best"
+          />
+          <StatCard
+            title={habit.type === 'bad' ? '30-Day Avoidance' : '30-Day Rate'}
+            value={`${stats.rate}%`}
+            icon={<TrendingUp className="w-5 h-5" />}
+            color="blue"
+            subtitle="Rolling 30-day window"
+          />
+          <StatCard
+            title={habit.type === 'bad' ? 'Total Avoided' : 'Total Completions'}
+            value={stats.totalSuccesses}
+            icon={<CalendarDays className="w-5 h-5" />}
+            color="purple"
+            subtitle={habit.type === 'bad' ? `${stats.timesPerformed} total slips` : 'Successful days'}
+          />
         </div>
       )}
 
+      {/* Bad Habit Specific Metrics */}
       {habit.type === 'bad' && stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <X className="w-5 h-5 text-red-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">Occurrence Count</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.timesPerformed}</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">all time</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="w-5 h-5 text-red-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">Relapse Count</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.relapseCount}</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">streak breaks</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <CalendarDays className="w-5 h-5 text-red-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">This Week</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.occurrencesThisWeek}</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">occurrences</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="w-5 h-5 text-red-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">This Month</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.occurrencesThisMonth}</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">occurrences</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-5 h-5 text-red-500" />
-              <span className="text-sm text-slate-500 dark:text-slate-400">Penalty Impact</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.penaltyImpact}%</div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">30 day score loss</div>
+        <div className="space-y-3">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+            Relapse & Occurrence Analysis
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            <StatCard
+              title="Occurrence Count"
+              value={stats.timesPerformed}
+              icon={<X className="w-5 h-5" />}
+              color="red"
+              subtitle="All-time slips"
+            />
+            <StatCard
+              title="Relapse Count"
+              value={stats.relapseCount}
+              icon={<Activity className="w-5 h-5" />}
+              color="red"
+              subtitle="Streak breaks"
+            />
+            <StatCard
+              title="This Week"
+              value={stats.occurrencesThisWeek}
+              icon={<CalendarDays className="w-5 h-5" />}
+              color="red"
+              subtitle="Past 7 days"
+            />
+            <StatCard
+              title="This Month"
+              value={stats.occurrencesThisMonth}
+              icon={<Shield className="w-5 h-5" />}
+              color="red"
+              subtitle="Past 30 days"
+            />
+            <StatCard
+              title="Penalty Impact"
+              value={`${stats.penaltyImpact}%`}
+              icon={<TrendingUp className="w-5 h-5" />}
+              color="red"
+              subtitle="Score reduction"
+            />
           </div>
         </div>
       )}
 
-      {/* Progress */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Overall Progress</h2>
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-slate-600 dark:text-slate-300">{habit.type === 'bad' ? 'Avoidance Rate' : 'Completion Rate'}</span>
-              <span className="font-semibold text-slate-900 dark:text-slate-100">{stats?.rate}%</span>
+      {/* Overall Progress & Impact Section */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs">
+        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight mb-5">
+          Progress & Consistency
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-elevated-dark/70 border border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex items-center justify-between text-xs sm:text-sm font-semibold mb-2">
+              <span className="text-slate-600 dark:text-slate-300">
+                {habit.type === 'bad' ? '30-Day Avoidance Rate' : '30-Day Completion Rate'}
+              </span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{stats?.rate}%</span>
             </div>
-            <ProgressBar value={stats?.rate || 0} color={habit.type === 'good' ? 'green' : 'green'} showLabel={false} />
+            <ProgressBar value={stats?.rate || 0} color="green" showLabel={false} size="md" />
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2 font-medium">
+              Based on active scheduled days in the past 30 days
+            </p>
           </div>
-          <div>
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-slate-600 dark:text-slate-300">{habit.type === 'bad' ? 'Lifetime Avoidance' : 'Lifetime Completion'}</span>
-              <span className="font-semibold text-slate-900 dark:text-slate-100">
-                {stats?.totalSuccesses}/{stats?.allDays}
+
+          <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-elevated-dark/70 border border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex items-center justify-between text-xs sm:text-sm font-semibold mb-2">
+              <span className="text-slate-600 dark:text-slate-300">
+                {habit.type === 'bad' ? 'Lifetime Avoidance' : 'Lifetime Completion'}
+              </span>
+              <span className="text-primary dark:text-primary-light font-bold">
+                {stats?.totalSuccesses} / {stats?.allDays}
               </span>
             </div>
             <ProgressBar
               value={stats?.totalSuccesses || 0}
               max={stats?.allDays || 1}
-              color={habit.type === 'good' ? 'green' : 'green'}
+              color="indigo"
               showLabel={false}
+              size="md"
             />
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2 font-medium">
+              Total successful days since starting this routine
+            </p>
           </div>
-          <div>
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-slate-600 dark:text-slate-300">Impact Score</span>
-              <span className="font-semibold text-slate-900 dark:text-slate-100">{stats?.impact}/100</span>
+
+          <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-elevated-dark/70 border border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex items-center justify-between text-xs sm:text-sm font-semibold mb-2">
+              <span className="text-slate-600 dark:text-slate-300">Relative Impact Score</span>
+              <span className="text-purple-600 dark:text-purple-400 font-bold">{stats?.impact} / 100</span>
             </div>
-            <ProgressBar value={stats?.impact || 0} max={100} color="blue" showLabel={false} />
+            <ProgressBar value={stats?.impact || 0} max={100} color="blue" showLabel={false} size="md" />
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2 font-medium">
+              Weight relative to your overall habit catalog
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Trend Chart */}
+      {/* 30-Day Trend Chart */}
       {stats && stats.trend.length > 0 && (
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-            {habit.type === 'bad' ? '30-Day Avoidance Trend' : '30-Day Completion Trend'}
-          </h2>
-          <div className="h-64">
+        <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                {habit.type === 'bad' ? '30-Day Avoidance Trend' : '30-Day Completion Trend'}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Daily timeline tracking consistency and slips
+              </p>
+            </div>
+          </div>
+          <div className="h-64 sm:h-72 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.trend}>
+              <AreaChart data={stats.trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    <stop
+                      offset="5%"
+                      stopColor={habit.type === 'good' ? '#22c55e' : '#6366F1'}
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={habit.type === 'good' ? '#22c55e' : '#6366F1'}
+                      stopOpacity={0.0}
+                    />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tickFormatter={(v: string) => v.slice(5)} stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(v: string) => v.slice(5)}
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area
                   type="monotone"
                   dataKey="successes"
-                  stroke="#22c55e"
+                  stroke={habit.type === 'good' ? '#22c55e' : '#6366F1'}
                   fill="url(#trendFill)"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   name={successLabel}
                 />
               </AreaChart>
@@ -355,34 +457,70 @@ const HabitDetails: React.FC = () => {
         </div>
       )}
 
-      {/* Monthly Stats */}
+      {/* Monthly Statistics Overview */}
       {stats && stats.monthly.length > 0 && (
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-            {habit.type === 'bad' ? 'Monthly Avoidance' : 'Monthly Statistics'}
+        <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight mb-4">
+            {habit.type === 'bad' ? 'Monthly Avoidance Rate' : 'Monthly Performance'}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {stats.monthly.map((m) => (
-              <div key={m.month} className="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{m.month}</div>
-                <div className="text-xl font-bold text-slate-900 dark:text-slate-100">
+              <div
+                key={m.month}
+                className="text-center p-3.5 rounded-xl bg-slate-50/80 dark:bg-elevated-dark/80 border border-slate-200/60 dark:border-slate-800/60"
+              >
+                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{m.month}</div>
+                <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-slate-50">
                   {m.total > 0 ? Math.round((m.successes / m.total) * 100) : 0}%
                 </div>
-                <div className="text-xs text-slate-400 dark:text-slate-500">{m.successes}/{m.total}</div>
+                <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                  {m.successes} / {m.total} days
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Calendar */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-          {habit.type === 'bad' ? 'Occurrence Calendar' : 'Completion Calendar'}
-        </h2>
-        <div className="grid grid-cols-7 gap-2">
+      {/* Calendar Grid */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+              {habit.type === 'bad' ? 'Occurrence Calendar' : 'Completion Calendar'}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Complete history from start date ({habit.startDate}) to today
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-xs font-medium">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`w-3 h-3 rounded-md ${
+                  habit.type === 'good' ? 'bg-emerald-500' : 'bg-rose-500'
+                }`}
+              />
+              <span className="text-slate-600 dark:text-slate-400">
+                {habit.type === 'good' ? 'Completed' : 'Occurred'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+              <span className="text-slate-600 dark:text-slate-400">
+                {habit.type === 'good' ? 'Not Marked' : 'Avoided'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-            <div key={d} className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{d}</div>
+            <div
+              key={d}
+              className="text-center text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 py-1"
+            >
+              {d}
+            </div>
           ))}
           {(() => {
             const days = [];
@@ -390,23 +528,31 @@ const HabitDetails: React.FC = () => {
             const end = new Date();
             const startDayOfWeek = start.getDay();
             for (let i = 0; i < startDayOfWeek; i++) {
-              days.push(<div key={`empty-${i}`} />);
+              days.push(<div key={`empty-${i}`} className="aspect-square" />);
             }
             const current = new Date(start);
             while (current <= end) {
               const dateStr = formatDate(current);
               const record = getHabitRecord(habit, dateStr);
-              const completed = record && record.completed;
+              const completed = Boolean(record && record.completed);
               days.push(
                 <div
                   key={dateStr}
-                  title={dateStr}
-                  className={`aspect-square rounded-lg flex items-center justify-center text-xs font-medium ${
+                  title={`${dateStr}: ${
                     completed
                       ? habit.type === 'good'
-                        ? 'bg-green-500 text-white'
-                        : 'bg-red-500 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                        ? 'Completed'
+                        : 'Occurred'
+                      : habit.type === 'good'
+                      ? 'Missed'
+                      : 'Avoided'
+                  }`}
+                  className={`aspect-square rounded-xl flex items-center justify-center text-xs font-semibold transition-transform hover:scale-105 cursor-pointer ${
+                    completed
+                      ? habit.type === 'good'
+                        ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/20'
+                        : 'bg-rose-500 text-white shadow-xs shadow-rose-500/20'
+                      : 'bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
                   {current.getDate()}
@@ -419,6 +565,7 @@ const HabitDetails: React.FC = () => {
         </div>
       </div>
 
+      {/* Modals */}
       <HabitModal
         isOpen={habitModalOpen}
         onClose={() => setHabitModalOpen(false)}

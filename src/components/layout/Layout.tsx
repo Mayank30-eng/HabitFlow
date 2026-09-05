@@ -1,20 +1,30 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LayoutDashboard, ListChecks, BarChart3, CalendarDays, Settings } from 'lucide-react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { useHabits } from '../../contexts/HabitContext';
 import LoadingSkeleton from '../common/LoadingSkeleton';
 
+const navItems = [
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/habits', label: 'Habits', icon: ListChecks },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { path: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { path: '/settings', label: 'Settings', icon: Settings },
+];
+
 const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { state } = useHabits();
+  const location = useLocation();
 
   return (
-    <div className="min-h-[100dvh] bg-bg-light dark:bg-bg-dark text-slate-900 dark:text-slate-100 flex">
+    <div className="min-h-[100dvh] bg-bg-light dark:bg-bg-dark text-slate-900 dark:text-slate-100 flex transition-colors">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block flex-shrink-0">
-        <div className="sticky top-0 h-screen overflow-y-auto">
+        <div className="sticky top-0 h-screen overflow-y-auto scrollbar-hide">
           <Sidebar />
         </div>
       </div>
@@ -27,14 +37,14 @@ const Layout: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 lg:hidden"
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
-              initial={{ x: -240 }}
+              initial={{ x: -264 }}
               animate={{ x: 0 }}
-              exit={{ x: -240 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              exit={{ x: -264 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
               className="fixed left-0 top-0 h-full z-50 lg:hidden"
             >
               <Sidebar onClose={() => setMobileOpen(false)} />
@@ -45,10 +55,8 @@ const Layout: React.FC = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <TopBar
-          onMenuClick={() => setMobileOpen(true)}
-        />
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+        <TopBar onMenuClick={() => setMobileOpen(true)} />
+        <main className="flex-1 p-4 lg:p-6 pb-20 lg:pb-6 overflow-auto">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -56,12 +64,12 @@ const Layout: React.FC = () => {
             className="max-w-7xl mx-auto space-y-4"
           >
             {state.error && (
-              <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+              <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-300 shadow-xs">
                 {state.error}
               </div>
             )}
             {state.saving && (
-              <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+              <div className="rounded-xl border border-primary/20 dark:border-primary/30 bg-primary/5 dark:bg-primary/10 px-4 py-3 text-sm text-primary dark:text-primary-light shadow-xs">
                 Saving changes...
               </div>
             )}
@@ -75,6 +83,31 @@ const Layout: React.FC = () => {
           </motion.div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav
+        aria-label="Mobile Navigation"
+        className="fixed bottom-0 left-0 right-0 z-30 bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 px-2 py-1.5 flex items-center justify-around lg:hidden transition-colors"
+      >
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-[11px] transition-all relative ${
+                isActive
+                  ? 'text-primary dark:text-primary-light font-semibold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
+              }`}
+            >
+              <Icon className={`w-5 h-5 mb-0.5 ${isActive ? 'text-primary dark:text-primary-light' : 'text-slate-400 dark:text-slate-500'}`} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 };

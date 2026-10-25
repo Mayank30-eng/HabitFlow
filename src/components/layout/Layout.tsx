@@ -17,15 +17,29 @@ const navItems = [
 
 const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('habitflow_sidebar_collapsed') === 'true';
+  });
   const { state } = useHabits();
   const location = useLocation();
+
+  const toggleSidebarCollapsed = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('habitflow_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-[100dvh] bg-bg-light dark:bg-bg-dark text-slate-900 dark:text-slate-100 flex transition-colors">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block flex-shrink-0">
         <div className="sticky top-0 h-screen overflow-y-auto scrollbar-hide">
-          <Sidebar />
+          <Sidebar
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={toggleSidebarCollapsed}
+          />
         </div>
       </div>
 

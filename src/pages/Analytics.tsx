@@ -1,11 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { TrendingUp, BarChart3, PieChart as PieChartIcon, Calendar, Shield, Activity } from 'lucide-react';
 import { useHabits } from '../contexts/HabitContext';
 import CalendarHeatmap from '../components/common/CalendarHeatmap';
-import {
-  getCompletionTrend, getWeeklyData, getMonthlyData, getHabitComparison,
-  getOverallStatus, getGoodVsBadStats, getBadHabitTrend
-} from '../utils/calculations';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend,
@@ -16,14 +12,30 @@ const Analytics: React.FC = () => {
   const { state } = useHabits();
   const [timeRange, setTimeRange] = useState<'7' | '30' | '90'>('30');
   const habits = state.habits;
+  const analytics = state.analytics;
 
-  const trendData = getCompletionTrend(habits, parseInt(timeRange));
-  const badTrendData = getBadHabitTrend(habits, parseInt(timeRange));
-  const weeklyData = getWeeklyData(habits);
-  const monthlyData = getMonthlyData(habits);
-  const comparisonData = getHabitComparison(habits);
-  const overallStatus = getOverallStatus(habits);
-  const { goodCompleted, badAvoided, badPerformed } = getGoodVsBadStats(habits);
+  // All trend/chart data now comes from backend analytics.
+  // For the time range selector, the backend always sends 30-day trends.
+  // For 7 and 90 day views, we slice or note that only 30 days are available.
+  const trendData = useMemo(() => {
+    const data = analytics?.trends?.completion ?? [];
+    const days = parseInt(timeRange);
+    if (days <= data.length) return data.slice(data.length - days);
+    return data;
+  }, [analytics, timeRange]);
+
+  const badTrendData = useMemo(() => {
+    const data = analytics?.trends?.badHabit ?? [];
+    const days = parseInt(timeRange);
+    if (days <= data.length) return data.slice(data.length - days);
+    return data;
+  }, [analytics, timeRange]);
+
+  const weeklyData = analytics?.trends?.weekly ?? [];
+  const monthlyData = analytics?.trends?.monthly ?? [];
+  const comparisonData = analytics?.comparison ?? [];
+  const overallStatus = analytics?.todayStatus ?? { completed: 0, missed: 0, pending: 0 };
+  const goodVsBad = analytics?.goodVsBad ?? { goodCompleted: 0, badAvoided: 0, badPerformed: 0, badTotal: 0 };
 
   const pieData = [
     { name: 'Completed', value: overallStatus.completed, color: '#22c55e' },
@@ -32,9 +44,9 @@ const Analytics: React.FC = () => {
   ].filter((d) => d.value > 0);
 
   const goodVsBadData = [
-    { name: 'Good Completed', value: goodCompleted, color: '#22c55e' },
-    { name: 'Bad Avoided', value: badAvoided, color: '#6366F1' },
-    { name: 'Bad Occurred', value: badPerformed, color: '#ef4444' },
+    { name: 'Good Completed', value: goodVsBad.goodCompleted, color: '#22c55e' },
+    { name: 'Bad Avoided', value: goodVsBad.badAvoided, color: '#6366F1' },
+    { name: 'Bad Occurred', value: goodVsBad.badPerformed, color: '#ef4444' },
   ];
 
   const CustomTooltip = ({
@@ -138,6 +150,15 @@ const Analytics: React.FC = () => {
                 strokeWidth={2.5}
                 dot={false}
                 name="Completed Good Habits"
+                activeDot={{ r: 5, strokeWidth: 0 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="missed"
+                stroke="#ef4444"
+                strokeWidth={2}
+                dot={false}
+                name="Missed Occurrences"
                 activeDot={{ r: 5, strokeWidth: 0 }}
               />
               <Line
@@ -404,15 +425,15 @@ const Analytics: React.FC = () => {
             </div>
             <div className="grid grid-cols-3 gap-1 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-center">
               <div>
-                <span className="text-emerald-600 font-bold block">{goodCompleted}</span>
+                <span className="text-emerald-600 font-bold block">{goodVsBad.goodCompleted}</span>
                 <span className="text-slate-400">Done</span>
               </div>
               <div>
-                <span className="text-primary font-bold block">{badAvoided}</span>
+                <span className="text-primary font-bold block">{goodVsBad.badAvoided}</span>
                 <span className="text-slate-400">Avoided</span>
               </div>
               <div>
-                <span className="text-rose-500 font-bold block">{badPerformed}</span>
+                <span className="text-rose-500 font-bold block">{goodVsBad.badPerformed}</span>
                 <span className="text-slate-400">Slips</span>
               </div>
             </div>

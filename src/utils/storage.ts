@@ -37,11 +37,3 @@ export const clearLegacyHabits = (): void => {
 export const exportData = (data: unknown): string => {
   return JSON.stringify(data, null, 2);
 };
-
-export const importData = (json: string): unknown => {
-  try {
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-};

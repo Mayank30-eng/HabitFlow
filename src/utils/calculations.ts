@@ -1,5 +1,5 @@
 import type { Habit } from '../types';
-import { getToday, subDays, getDaysInRange, getHabitRecord, formatDate } from './helpers';
+import { getToday, subDays, getDaysInRange, getHabitRecord, formatDate, isDateScheduled } from './helpers';
 
 export const getHabitActiveDates = (habit: Habit, start: string, end: string): string[] => {
   const activeStart = start > habit.startDate ? start : habit.startDate;
@@ -85,11 +85,34 @@ export const calculateLongestStreak = (habit: Habit): number => {
 export const calculateSuccessRate = (habit: Habit, days: number = 30): number => {
   const today = getToday();
   const start = subDays(today, days - 1);
-  const range = getHabitActiveDates(habit, start, today);
+  const range = getHabitActiveDates(habit, start, today).filter((d) => isDateScheduled(habit, d));
   if (range.length === 0) return 0;
 
-  const successes = range.filter((date) => isHabitSuccessOnDate(habit, date)).length;
-  return Math.round((successes / range.length) * 100);
+  let eligibleDenominator = 0;
+  let successes = 0;
+
+  for (const date of range) {
+    if (date < today) {
+      eligibleDenominator += 1;
+      if (isHabitSuccessOnDate(habit, date)) successes += 1;
+    } else if (date === today) {
+      if (habit.type === 'good') {
+        const isDone = Boolean(getHabitRecord(habit, today)?.completed);
+        if (isDone) {
+          eligibleDenominator += 1;
+          successes += 1;
+        }
+        // If not completed yet today, it is pending; do not penalize denominator
+      } else {
+        const performed = isBadHabitOccurrenceOnDate(habit, today);
+        eligibleDenominator += 1;
+        if (!performed) successes += 1;
+      }
+    }
+  }
+
+  if (eligibleDenominator === 0) return 100;
+  return Math.min(100, Math.max(0, Math.round((successes / eligibleDenominator) * 100)));
 };
 
 /**
@@ -277,12 +300,26 @@ export const calculateOverallSuccessRate = (habits: Habit[]): number => {
   let totalSuccesses = 0;
 
   habits.forEach((habit) => {
-    const range = getHabitActiveDates(habit, habit.startDate, today);
-    totalPossible += range.length;
-    totalSuccesses += range.filter((date) => isHabitSuccessOnDate(habit, date)).length;
+    const range = getHabitActiveDates(habit, habit.startDate, today).filter((d) => isDateScheduled(habit, d));
+    for (const date of range) {
+      if (date < today) {
+        totalPossible += 1;
+        if (isHabitSuccessOnDate(habit, date)) totalSuccesses += 1;
+      } else if (date === today) {
+        if (habit.type === 'good') {
+          if (getHabitRecord(habit, today)?.completed) {
+            totalPossible += 1;
+            totalSuccesses += 1;
+          }
+        } else {
+          totalPossible += 1;
+          if (!isBadHabitOccurrenceOnDate(habit, today)) totalSuccesses += 1;
+        }
+      }
+    }
   });
 
-  return totalPossible === 0 ? 0 : Math.min(100, Math.max(0, Math.round((totalSuccesses / totalPossible) * 100)));
+  return totalPossible === 0 ? 100 : Math.min(100, Math.max(0, Math.round((totalSuccesses / totalPossible) * 100)));
 };
 
 /**
@@ -365,17 +402,24 @@ export const calculateGrowthScore = (habits: Habit[]): number => {
  * Completion trend for GOOD habits only.
  * (Already correct — filters to good habits.)
  */
-export const getCompletionTrend = (habits: Habit[], days: number = 30): { date: string; completed: number; total: number }[] => {
+export const getCompletionTrend = (
+  habits: Habit[],
+  days: number = 30
+): { date: string; completed: number; total: number; missed: number; pending: number; isToday: boolean }[] => {
   const today = getToday();
   const result = [];
   for (let i = days - 1; i >= 0; i--) {
     const date = subDays(today, i);
-    const goodHabits = habits.filter((h) => h.type === 'good' && h.startDate <= date);
+    const goodHabits = habits.filter((h) => h.type === 'good' && h.startDate <= date && isDateScheduled(h, date));
     const completed = goodHabits.filter((h) => {
       const record = getHabitRecord(h, date);
       return record && record.completed;
     }).length;
-    result.push({ date, completed, total: goodHabits.length });
+    const notCompleted = goodHabits.length - completed;
+    const isToday = date === today;
+    const missed = isToday ? 0 : notCompleted;
+    const pending = isToday ? notCompleted : 0;
+    result.push({ date, completed, total: goodHabits.length, missed, pending, isToday });
   }
   return result;
 };
@@ -385,22 +429,53 @@ export const getBadHabitTrend = (habits: Habit[], days: number = 30): { date: st
   const result = [];
   for (let i = days - 1; i >= 0; i--) {
     const date = subDays(today, i);
-    const badHabits = habits.filter((h) => h.type === 'bad' && h.startDate <= date);
+    const badHabits = habits.filter((h) => h.type === 'bad' && h.startDate <= date && isDateScheduled(h, date));
     const occurrences = badHabits.filter((h) => isBadHabitOccurrenceOnDate(h, date)).length;
     result.push({ date, avoided: badHabits.length - occurrences, occurrences, total: badHabits.length });
   }
   return result;
 };
 
-export const getHabitSuccessTrend = (habit: Habit, days: number = 30): { date: string; successes: number; failures: number; total: number }[] => {
+export const getHabitSuccessTrend = (
+  habit: Habit,
+  days: number = 30
+): { date: string; successes: number; failures: number; total: number; status: string; pending: number; isToday: boolean }[] => {
   const today = getToday();
   const result = [];
   for (let i = days - 1; i >= 0; i--) {
     const date = subDays(today, i);
-    const active = habit.startDate <= date;
-    const success = active && isHabitSuccessOnDate(habit, date);
-    const failure = active && !success;
-    result.push({ date, successes: success ? 1 : 0, failures: failure ? 1 : 0, total: active ? 1 : 0 });
+    const scheduled = habit.startDate <= date && isDateScheduled(habit, date);
+    const isToday = date === today;
+    let status = 'unscheduled';
+    let successes = 0;
+    let failures = 0;
+    let pending = 0;
+
+    if (scheduled) {
+      if (habit.type === 'good') {
+        const isDone = Boolean(getHabitRecord(habit, date)?.completed);
+        if (isDone) {
+          status = 'completed';
+          successes = 1;
+        } else if (isToday) {
+          status = 'pending';
+          pending = 1;
+        } else {
+          status = 'missed';
+          failures = 1;
+        }
+      } else {
+        const performed = isBadHabitOccurrenceOnDate(habit, date);
+        if (performed) {
+          status = 'performed';
+          failures = 1;
+        } else {
+          status = 'avoided';
+          successes = 1;
+        }
+      }
+    }
+    result.push({ date, successes, failures, total: scheduled ? 1 : 0, status, pending, isToday });
   }
   return result;
 };

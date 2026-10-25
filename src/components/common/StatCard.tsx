@@ -42,10 +42,10 @@ const StatCard: React.FC<StatCardProps> = ({
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
-      className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all group relative overflow-hidden"
+      className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-4 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all group relative overflow-hidden"
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className={`p-2.5 rounded-xl border flex items-center justify-center ${colorMap[color] || colorMap.indigo}`}>
+      <div className="flex items-start justify-between mb-2.5">
+        <div className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${colorMap[color] || colorMap.indigo} [&>svg]:w-4.5 [&>svg]:h-4.5`}>
           {icon}
         </div>
         {trend && (
@@ -55,14 +55,14 @@ const StatCard: React.FC<StatCardProps> = ({
           </div>
         )}
       </div>
-      <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight mb-1">
+      <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight mb-0.5">
         {value}
       </div>
-      <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
+      <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">
         {title}
       </div>
       {subtitle && (
-        <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+        <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5 truncate">
           {subtitle}
         </div>
       )}

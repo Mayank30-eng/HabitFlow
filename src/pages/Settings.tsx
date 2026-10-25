@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sun, Moon, Download, Upload, Trash2, Database, Layers, CheckCircle2, Shield, Info, ChevronRight
+  Sun, Moon, Download, Trash2, Database, Layers, CheckCircle2, Shield, Info, ChevronRight
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useHabits } from '../contexts/HabitContext';
@@ -12,11 +11,9 @@ import ConfirmModal from '../components/modals/ConfirmModal';
 
 const Settings: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { state, importData: importHabits, resetData } = useHabits();
+  const { state, resetData } = useHabits();
   const { showToast } = useToast();
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [showImport, setShowImport] = useState(false);
 
   const handleExport = () => {
     const data = exportData(state.habits);
@@ -28,22 +25,6 @@ const Settings: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
     showToast('Data exported successfully', 'success');
-  };
-
-  const handleImport = async () => {
-    try {
-      const data = JSON.parse(importText);
-      if (Array.isArray(data)) {
-        await importHabits(data);
-        showToast('Data imported successfully', 'success');
-        setImportText('');
-        setShowImport(false);
-      } else {
-        showToast('Invalid data format: Expected habit list', 'error');
-      }
-    } catch {
-      showToast('Invalid JSON format', 'error');
-    }
   };
 
   const handleReset = async () => {
@@ -174,73 +155,6 @@ const Settings: React.FC = () => {
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
           </button>
-
-          {/* Import Button & Expandable Drawer */}
-          <div className="rounded-xl border border-slate-200/70 dark:border-slate-800/70 bg-slate-50 dark:bg-elevated-dark overflow-hidden transition-all">
-            <button
-              onClick={() => setShowImport(!showImport)}
-              type="button"
-              className="w-full flex items-center justify-between p-4 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors cursor-pointer group"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                  <Upload className="w-4 h-4" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-primary-light transition-colors">
-                    Import Habit Data
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Restore habits and history logs from a previously exported JSON backup
-                  </p>
-                </div>
-              </div>
-              <ChevronRight
-                className={`w-4 h-4 text-slate-400 transition-transform ${
-                  showImport ? 'rotate-90' : ''
-                }`}
-              />
-            </button>
-
-            <AnimatePresence>
-              {showImport && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="px-4 pb-4 pt-1 border-t border-slate-200/60 dark:border-slate-800/60 space-y-3"
-                >
-                  <textarea
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                    rows={4}
-                    placeholder="Paste your exported JSON data here..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-dark text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleImport}
-                      type="button"
-                      disabled={!importText.trim()}
-                      className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                    >
-                      Import Now
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowImport(false);
-                        setImportText('');
-                      }}
-                      type="button"
-                      className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
           {/* Reset All Data Button */}
           <button

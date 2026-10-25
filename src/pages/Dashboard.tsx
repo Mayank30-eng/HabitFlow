@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Flame, Target, TrendingUp, Zap, Shield, Activity,
@@ -10,13 +10,10 @@ import StatCard from '../components/common/StatCard';
 import HabitCard from '../components/common/HabitCard';
 import HabitModal from '../components/modals/HabitModal';
 import ConfirmModal from '../components/modals/ConfirmModal';
+import MotivationalQuoteModal from '../components/common/MotivationalQuoteModal';
 import CalendarHeatmap from '../components/common/CalendarHeatmap';
 import EmptyState from '../components/common/EmptyState';
 import CircularProgress from '../components/common/CircularProgress';
-import {
-  calculateOverallSuccessRate, calculateGrowthScore, getOverallStatus, getGoodVsBadStats,
-  getGoodHabitDashboardStats, getBadHabitDashboardStats
-} from '../utils/calculations';
 import { getToday, formatDate } from '../utils/helpers';
 import type { HabitFormData } from '../types';
 
@@ -25,26 +22,46 @@ const Dashboard: React.FC = () => {
   const { showToast } = useToast();
   const [habitModalOpen, setHabitModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<string | null>(null);
   const [deletingHabit, setDeletingHabit] = useState<string | null>(null);
   const [habitFilter, setHabitFilter] = useState<'all' | 'good' | 'bad'>('all');
 
+  // Trigger motivational quote overlay only on entrance following a successful login
+  useEffect(() => {
+    if (sessionStorage.getItem('habitflow_just_logged_in') === 'true') {
+      sessionStorage.removeItem('habitflow_just_logged_in');
+      setQuoteModalOpen(true);
+    }
+  }, []);
+
   const habits = state.habits;
+  const analytics = state.analytics;
   const today = getToday();
 
+  // All stats now come from backend-computed analytics
   const stats = useMemo(() => {
-    const total = habits.length;
-    const good = getGoodHabitDashboardStats(habits);
-    const bad = getBadHabitDashboardStats(habits);
-    const successRate = calculateOverallSuccessRate(habits);
-    const growth = calculateGrowthScore(habits);
-    const { badAvoided, badPerformed, badTotal } = getGoodVsBadStats(habits);
-    const { completed, missed, pending } = getOverallStatus(habits);
+    const good = analytics?.goodStats ?? { completionRate: 0, currentStreak: 0, longestStreak: 0, completedToday: 0, totalGood: 0 };
+    const bad = analytics?.badStats ?? { bestAvoidanceStreak: 0, longestAvoidanceStreak: 0, totalRelapses: 0, totalOccurrences: 0, totalAvoidedDays: 0, occurrencesThisWeek: 0, occurrencesThisMonth: 0, avoidanceRate: 0, penaltyImpact: 0 };
+    const successRate = analytics?.overallSuccessRate ?? 0;
+    const growth = analytics?.growthScore ?? 0;
+    const gvb = analytics?.goodVsBad ?? { goodCompleted: 0, badAvoided: 0, badPerformed: 0, badTotal: 0 };
+    const todayStatus = analytics?.todayStatus ?? { completed: 0, missed: 0, pending: 0 };
 
     return {
-      total, good, bad, successRate, growth, badAvoided, badPerformed, badTotal, completed, missed, pending
+      total: habits.length,
+      good,
+      bad,
+      successRate,
+      growth,
+      badAvoided: gvb.badAvoided,
+      badPerformed: gvb.badPerformed,
+      badTotal: gvb.badTotal,
+      completed: todayStatus.completed,
+      missed: todayStatus.missed,
+      pending: todayStatus.pending,
     };
-  }, [habits]);
+  }, [habits, analytics]);
 
   const recentHabits = useMemo(() => {
     let filtered = habits;
@@ -77,7 +94,7 @@ const Dashboard: React.FC = () => {
       await toggleHabit(id);
       showToast(
         habit.type === 'good'
-          ? wasMarked ? `${habit.name} marked as missed` : `${habit.name} completed!`
+          ? wasMarked ? `${habit.name} marked uncompleted` : `${habit.name} completed!`
           : wasMarked ? `${habit.name} occurrence removed` : `${habit.name} occurrence tracked`,
         habit.type === 'bad' && !wasMarked ? 'info' : 'success'
       );
@@ -128,11 +145,11 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Hero: Today's Focus Card */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-surface-light via-surface-light to-elevated-light dark:from-surface-dark dark:via-surface-dark dark:to-elevated-dark rounded-3xl border border-slate-200/80 dark:border-slate-800/80 p-6 sm:p-8 shadow-xs">
+      {/* Hero: Today's Focus Card (Matches Reference Image) */}
+      <div className="relative overflow-hidden bg-surface-light dark:bg-[#0c1220] rounded-3xl border border-slate-200/80 dark:border-slate-800/90 p-6 sm:p-7 shadow-xs">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light text-xs font-semibold">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary-light border border-primary/20 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Today's Focus</span>
             </div>
@@ -143,24 +160,25 @@ const Dashboard: React.FC = () => {
                 ? `${stats.good.completedToday} of ${stats.good.totalGood} completed today`
                 : 'Ready to build momentum today?'}
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-normal leading-relaxed">
               {todayCompletionRate === 100 && stats.good.totalGood > 0
                 ? 'Fantastic work! You have hit 100% of your good habits today.'
                 : stats.good.totalGood > 0
                 ? `You have completed ${stats.good.completedToday} out of ${stats.good.totalGood} good habits. Stay consistent to keep your streaks alive!`
                 : 'Get started by creating your first habit to track your daily progress.'}
             </p>
-            <div className="pt-2 flex flex-wrap items-center gap-3">
+            <div className="pt-1 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold shadow-xs shadow-primary/25 transition-all active:scale-95 cursor-pointer"
+                type="button"
+                className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold shadow-xs shadow-primary/25 transition-all active:scale-95 cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 stroke-[2.5]" />
                 Add New Habit
               </button>
               <Link
                 to="/habits"
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-[#182033] hover:bg-slate-200 dark:hover:bg-[#202b44] text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/50 text-sm font-semibold transition-colors"
               >
                 Manage All
                 <ChevronRight className="w-4 h-4" />
@@ -169,26 +187,26 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Progress Ring & Mini Indicators */}
-          <div className="flex items-center gap-6 self-center md:self-auto bg-slate-50/80 dark:bg-elevated-dark/80 backdrop-blur-xs p-4 sm:p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 flex-shrink-0">
+          <div className="flex items-center gap-6 self-center md:self-auto bg-slate-50/90 dark:bg-[#070b14]/90 backdrop-blur-xs p-5 rounded-2xl border border-slate-200/70 dark:border-slate-800/90 flex-shrink-0 shadow-xs">
             <CircularProgress
               value={todayCompletionRate}
-              size={100}
-              strokeWidth={9}
+              size={96}
+              strokeWidth={8}
               color="primary"
-              sublabel="Today"
+              sublabel="TODAY"
             />
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 font-medium">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>Completed: <strong className="text-slate-900 dark:text-slate-100">{stats.completed}</strong></span>
+                <span>Completed: <strong className="text-slate-900 dark:text-slate-100 font-bold">{stats.completed}</strong></span>
               </div>
-              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+              <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 font-medium">
                 <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                <span>Pending: <strong className="text-slate-900 dark:text-slate-100">{stats.pending}</strong></span>
+                <span>Pending: <strong className="text-slate-900 dark:text-slate-100 font-bold">{stats.pending}</strong></span>
               </div>
-              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <Shield className="w-4 h-4 text-primary flex-shrink-0" />
-                <span>Bad Avoided: <strong className="text-slate-900 dark:text-slate-100">{stats.badAvoided}/{stats.badTotal}</strong></span>
+              <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 font-medium">
+                <Shield className="w-4 h-4 text-primary dark:text-primary-light flex-shrink-0" />
+                <span>Bad Avoided: <strong className="text-slate-900 dark:text-slate-100 font-bold">{stats.badAvoided}/{stats.badTotal}</strong></span>
               </div>
             </div>
           </div>
@@ -495,6 +513,10 @@ const Dashboard: React.FC = () => {
         message="Are you sure you want to delete this habit? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
+      />
+      <MotivationalQuoteModal
+        isOpen={quoteModalOpen}
+        onClose={() => setQuoteModalOpen(false)}
       />
     </div>
   );

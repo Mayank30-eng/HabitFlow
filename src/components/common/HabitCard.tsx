@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, Flame, Edit2, Trash2 } from 'lucide-react';
 import type { Habit } from '../../types';
-import { calculateStreak, calculateSuccessRate } from '../../utils/calculations';
+import { useHabits } from '../../contexts/HabitContext';
 import { getHabitRecord, getToday } from '../../utils/helpers';
 import ProgressBar from './ProgressBar';
 
@@ -16,17 +16,33 @@ interface HabitCardProps {
 }
 
 const HabitCard: React.FC<HabitCardProps> = ({ habit, onToggle, onEdit, onDelete, index }) => {
-  const streak = calculateStreak(habit);
-  const rate = calculateSuccessRate(habit, 30);
+  const { state } = useHabits();
+  const [showSparkles, setShowSparkles] = useState(false);
+
+  // Read metrics from backend-computed analytics
+  const perHabit = state.analytics?.perHabit?.[habit.id];
+  const streak = habit.type === 'good'
+    ? (perHabit?.currentStreak ?? 0)
+    : (perHabit?.avoidanceStreak ?? 0);
+  const rate = perHabit?.successRate ?? 0;
+
   const todayRecord = getHabitRecord(habit, getToday());
   const isCompleted = Boolean(todayRecord && todayRecord.completed);
+
+  const handleToggle = () => {
+    if (!isCompleted && habit.type === 'good') {
+      setShowSparkles(true);
+      setTimeout(() => setShowSparkles(false), 850);
+    }
+    onToggle();
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.25, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-      className={`bg-surface-light dark:bg-surface-dark rounded-2xl border transition-all duration-200 group relative p-4 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 ${
+      className={`bg-surface-light dark:bg-surface-dark rounded-2xl border transition-all duration-200 group relative p-3.5 sm:p-4 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 ${
         isCompleted
           ? habit.type === 'good'
             ? 'border-emerald-200/80 dark:border-emerald-900/40 bg-emerald-500/[0.02] dark:bg-emerald-950/[0.1]'
@@ -34,36 +50,65 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, onToggle, onEdit, onDelete
           : 'border-slate-200/80 dark:border-slate-800/80'
       }`}
     >
-      <div className="flex items-start gap-3.5">
-        {/* Toggle Button */}
-        <button
-          onClick={onToggle}
-          type="button"
-          aria-label={
-            habit.type === 'good'
-              ? isCompleted
-                ? `Mark ${habit.name} as uncompleted`
-                : `Mark ${habit.name} as completed`
-              : isCompleted
-              ? `Remove occurrence for ${habit.name}`
-              : `Record occurrence for ${habit.name}`
-          }
-          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0 cursor-pointer ${
-            isCompleted
-              ? habit.type === 'good'
-                ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95'
-                : 'bg-rose-500 text-white shadow-xs shadow-rose-500/30 hover:bg-rose-600 active:scale-95'
-              : habit.type === 'good'
-              ? 'border-2 border-dashed border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 active:scale-95'
-              : 'border-2 border-slate-300 dark:border-slate-600 text-transparent hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-500 active:scale-95'
-          }`}
-        >
-          {isCompleted ? (
-            habit.type === 'good' ? <Check className="w-4 h-4 stroke-[3]" /> : <X className="w-4 h-4 stroke-[3]" />
-          ) : (
-            habit.type === 'good' ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : <X className="w-3.5 h-3.5 stroke-[2.5]" />
-          )}
-        </button>
+      <div className="flex items-start gap-3">
+        {/* Toggle Button with Celebration Sparkle Animation */}
+        <div className="relative flex-shrink-0">
+          <button
+            onClick={handleToggle}
+            type="button"
+            aria-label={
+              habit.type === 'good'
+                ? isCompleted
+                  ? `Mark ${habit.name} as uncompleted`
+                  : `Mark ${habit.name} as completed`
+                : isCompleted
+                ? `Remove occurrence for ${habit.name}`
+                : `Record occurrence for ${habit.name}`
+            }
+            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+              isCompleted
+                ? habit.type === 'good'
+                  ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95'
+                  : 'bg-rose-500 text-white shadow-xs shadow-rose-500/30 hover:bg-rose-600 active:scale-95'
+                : habit.type === 'good'
+                ? 'border-2 border-dashed border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 active:scale-95'
+                : 'border-2 border-slate-300 dark:border-slate-600 text-transparent hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-500 active:scale-95'
+            }`}
+          >
+            {isCompleted ? (
+              habit.type === 'good' ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <X className="w-3.5 h-3.5 stroke-[3]" />
+            ) : (
+              habit.type === 'good' ? <Check className="w-3 h-3 stroke-[2.5]" /> : <X className="w-3 h-3 stroke-[2.5]" />
+            )}
+          </button>
+
+          <AnimatePresence>
+            {showSparkles && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                {[0, 60, 120, 180, 240, 300].map((angle, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
+                    animate={{
+                      scale: [0, 1.2, 0.4],
+                      x: Math.cos((angle * Math.PI) / 180) * 20,
+                      y: Math.sin((angle * Math.PI) / 180) * 20,
+                      opacity: [1, 1, 0],
+                    }}
+                    transition={{ duration: 0.65, ease: 'easeOut' }}
+                    className="absolute w-1.5 h-1.5 rounded-full bg-emerald-400 dark:bg-emerald-300 shadow-xs shadow-emerald-400"
+                  />
+                ))}
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0.9 }}
+                  animate={{ scale: 1.5, opacity: 0 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className="absolute inset-0 rounded-xl ring-2 ring-emerald-400"
+                />
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">

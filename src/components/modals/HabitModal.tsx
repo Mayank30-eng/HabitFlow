@@ -68,51 +68,63 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  const inputClass =
+    'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-elevated-dark text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none transition-all';
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="max-w-md">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Habit Name</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Habit Name
+          </label>
           <input
             type="text"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+            className={inputClass}
             placeholder="e.g., Morning Workout"
+            required
           />
-          {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          {errors.name && <p className="text-xs text-rose-600 dark:text-rose-400 font-medium mt-1">{errors.name}</p>}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              Category
+            </label>
             <select
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 outline-none"
+              className={inputClass}
             >
               {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Type</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              Type
+            </label>
             <div className="flex gap-2">
               {(['good', 'bad'] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setForm({ ...form, type: t })}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                  className={`flex-1 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 ${
                     form.type === t
                       ? t === 'good'
-                        ? 'bg-green-500 text-white border-green-500'
-                        : 'bg-red-500 text-white border-red-500'
-                      : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'
+                        ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
+                        : 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                      : 'bg-surface-light dark:bg-elevated-dark border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
-                  {t === 'good' ? 'Good Habit' : 'Bad Habit'}
+                  {t === 'good' ? 'Good' : 'Bad'}
                 </button>
               ))}
             </div>
@@ -120,11 +132,13 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Frequency</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Frequency
+          </label>
           <select
             value={form.frequency}
             onChange={(e) => setForm({ ...form, frequency: e.target.value as 'daily' | 'weekly' | 'custom' })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 outline-none"
+            className={inputClass}
           >
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
@@ -134,21 +148,24 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
 
         {form.frequency === 'custom' && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Days</label>
-            <div className="flex gap-1">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+              Select Active Days
+            </label>
+            <div className="flex gap-1.5">
               {dayNames.map((day, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => toggleDay(i)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${
+                  aria-pressed={form.customDays.includes(i)}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 ${
                     form.customDays.includes(i)
-                      ? 'bg-green-500 text-white border-green-500'
-                      : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400'
+                      ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
+                      : 'bg-surface-light dark:bg-elevated-dark border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
-                  {form.customDays.includes(i) && <Check className="w-3 h-3 mx-auto mb-0.5" />}
-                  {day}
+                  {form.customDays.includes(i) && <Check className="w-3 h-3 mx-auto mb-0.5 stroke-[3]" />}
+                  <span>{day}</span>
                 </button>
               ))}
             </div>
@@ -156,39 +173,44 @@ const HabitModal: React.FC<HabitModalProps> = ({ isOpen, onClose, onSubmit, init
         )}
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Description
+          </label>
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 outline-none resize-none"
-            placeholder="Optional description..."
+            className={`${inputClass} resize-none`}
+            placeholder="Optional purpose, trigger, or routine notes..."
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start Date</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Start Date
+          </label>
           <input
             type="date"
             value={form.startDate}
             min={!initialData ? today : undefined}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-green-500 outline-none"
+            className={inputClass}
+            required
           />
-          {errors.startDate && <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>}
+          {errors.startDate && <p className="text-xs text-rose-600 dark:text-rose-400 font-medium mt-1">{errors.startDate}</p>}
         </div>
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 pt-3">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="flex-1 px-4 py-2.5 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-semibold text-sm shadow-xs shadow-primary/25 transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer active:scale-98"
           >
             Save Habit
           </button>

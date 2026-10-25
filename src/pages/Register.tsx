@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, UserPlus, User, Mail, Lock } from 'lucide-react';
+import { Flame, UserPlus, User, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Register: React.FC = () => {
@@ -44,77 +44,80 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-bg-light dark:bg-bg-dark flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-bg-light dark:bg-bg-dark flex items-center justify-center p-4 transition-colors">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-md bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-2xl p-6 sm:p-8 shadow-xl"
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+        className="w-full max-w-md bg-surface-light dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-7 sm:p-9 shadow-xl relative overflow-hidden"
       >
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center mb-3 shadow-lg shadow-green-500/20">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-indigo-500 flex items-center justify-center mb-3 shadow-md shadow-primary/25">
             <Flame className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Create Account</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Start your habit transformation journey today
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">
+            Create Account
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
+            Join <strong className="text-slate-800 dark:text-slate-200">HabitFlow</strong> and transform your daily routines
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-sm text-red-600 dark:text-red-300">
-            {error}
+          <div className="mb-6 p-3.5 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 text-xs sm:text-sm text-red-600 dark:text-red-400 flex items-center gap-2 shadow-xs">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
               Full Name
             </label>
             <div className="relative">
-              <User className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Jane Doe"
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-elevated-dark text-slate-900 dark:text-slate-100 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
               Email Address
             </label>
             <div className="relative">
-              <Mail className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-elevated-dark text-slate-900 dark:text-slate-100 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
               Password
             </label>
             <div className="relative">
-              <Lock className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 8 characters"
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-elevated-dark text-slate-900 dark:text-slate-100 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
               />
             </div>
           </div>
@@ -122,16 +125,19 @@ const Register: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-2.5 px-4 mt-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-md shadow-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-full py-3 px-4 mt-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-98"
           >
             <UserPlus className="w-4 h-4" />
-            {isSubmitting ? 'Creating account...' : 'Create Account'}
+            <span>{isSubmitting ? 'Creating account...' : 'Create Account'}</span>
           </button>
         </form>
 
         <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-green-600 dark:text-green-400 hover:underline">
+          <Link
+            to="/login"
+            className="font-bold text-primary dark:text-primary-light hover:underline ml-1"
+          >
             Sign in
           </Link>
         </div>

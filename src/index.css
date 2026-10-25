@@ -4,18 +4,30 @@
 
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --color-bg-light: #f8fafc;
-  --color-surface-light: #ffffff;
-  --color-bg-dark: #0f172a;
-  --color-surface-dark: #1e293b;
-  --color-accent-good: #22c55e;
-  --color-accent-good-light: #4ade80;
-  --color-accent-bad: #ef4444;
-  --color-accent-bad-light: #f87171;
-  --color-accent-warn: #f59e0b;
-  --color-accent-warn-light: #fbbf24;
-  --color-accent-info: #3b82f6;
-  --color-accent-info-light: #60a5fa;
+
+  /* === Backgrounds === */
+  --color-bg-light: #F8FAFC;
+  --color-surface-light: #FFFFFF;
+  --color-elevated-light: #F1F5F9;
+
+  --color-bg-dark: #090D16;
+  --color-surface-dark: #111827;
+  --color-elevated-dark: #172033;
+
+  /* === Brand === */
+  --color-primary: #6366F1;
+  --color-primary-hover: #4F46E5;
+  --color-primary-light: #818CF8;
+
+  /* === Semantic accents === */
+  --color-accent-good: #22C55E;
+  --color-accent-good-light: #4ADE80;
+  --color-accent-bad: #EF4444;
+  --color-accent-bad-light: #F87171;
+  --color-accent-warn: #F59E0B;
+  --color-accent-warn-light: #FBBF24;
+  --color-accent-info: #3B82F6;
+  --color-accent-info-light: #60A5FA;
 }
 
 @layer base {
@@ -47,7 +59,7 @@
 }
 
 .skeleton-shimmer {
-  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.1) 50%, transparent 75%);
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.06) 50%, transparent 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

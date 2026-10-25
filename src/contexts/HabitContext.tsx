@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
-import type { Habit, HabitFormData, FilterState, PersistedAppState, UserSettings } from '../types';
+import type { Habit, HabitFormData, FilterState, PersistedAppState, UserSettings, EnrichedAnalytics } from '../types';
 import { getToday, getHabitRecord } from '../utils/helpers';
 import { api, getToken } from '../utils/api';
 import {
@@ -16,7 +16,7 @@ interface HabitState {
   saving: boolean;
   error: string | null;
   settings: UserSettings;
-  analytics?: unknown;
+  analytics?: EnrichedAnalytics;
 }
 
 type HabitAction =
@@ -82,7 +82,6 @@ interface HabitContextType {
   reorderHabits: (habits: Habit[]) => Promise<void>;
   setFilters: (filters: Partial<FilterState>) => void;
   resetFilters: () => void;
-  importData: (habits: Habit[], replace?: boolean) => Promise<void>;
   resetData: () => Promise<void>;
   getFilteredHabits: () => Habit[];
   getTodayStatus: (id: string) => boolean | null;
@@ -197,10 +196,6 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     dispatch({ type: 'RESET_FILTERS' });
   }, []);
 
-  const importData = useCallback((habits: Habit[], replace = false) => {
-    return persist(() => api.importHabits(habits, replace));
-  }, [persist]);
-
   const resetData = useCallback(() => {
     return persist(() => api.resetData());
   }, [persist]);
@@ -258,7 +253,6 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         reorderHabits,
         setFilters,
         resetFilters,
-        importData,
         resetData,
         getFilteredHabits,
         getTodayStatus,

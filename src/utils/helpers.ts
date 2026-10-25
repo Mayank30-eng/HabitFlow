@@ -110,3 +110,22 @@ export const getRecentHistory = (habit: Habit, days: number = 30): HabitRecord[]
     return record || { date, completed: false };
   });
 };
+
+/**
+ * Check whether a date is a scheduled tracking day for a given habit
+ */
+export const isDateScheduled = (habit: Habit, dateStr: string): boolean => {
+  if (dateStr < habit.startDate) return false;
+  const freq = habit.frequency || 'daily';
+  if (freq === 'daily') return true;
+  if (freq === 'weekly') {
+    return getDayOfWeek(dateStr) === getDayOfWeek(habit.startDate);
+  }
+  if (freq === 'custom') {
+    const days = Array.isArray(habit.customDays) ? habit.customDays : [];
+    if (days.length === 0) return false;
+    return days.includes(getDayOfWeek(dateStr));
+  }
+  return true;
+};
+

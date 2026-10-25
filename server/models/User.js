@@ -45,7 +45,7 @@ userSchema.set('toJSON', {
   },
 });
 
-// Using 'AuthUser' instead of 'User' to avoid OverwriteModelError with the existing model
-const User = mongoose.model('AuthUser', userSchema);
+// Canonical User model. Collection is 'authusers' (preserved from original AuthUser registration).
+const User = mongoose.model('User', userSchema, 'authusers');
 
 export default User;

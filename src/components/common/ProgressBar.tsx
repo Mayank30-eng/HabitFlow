@@ -3,7 +3,7 @@ import React from 'react';
 interface ProgressBarProps {
   value: number;
   max?: number;
-  color?: 'green' | 'red' | 'amber' | 'blue';
+  color?: 'green' | 'red' | 'amber' | 'blue' | 'indigo';
   showLabel?: boolean;
   size?: 'sm' | 'md';
 }
@@ -13,6 +13,7 @@ const colorMap = {
   red: 'bg-red-500',
   amber: 'bg-amber-500',
   blue: 'bg-blue-500',
+  indigo: 'bg-primary',
 };
 
 const ProgressBar: React.FC<ProgressBarProps> = ({ value, max = 100, color = 'green', showLabel = true, size = 'md' }) => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getToday, subDays, getDaysInRange, getHabitRecord } from '../../utils/helpers';
+import { getToday, subDays, getDaysInRange, getHabitRecord, isDateScheduled } from '../../utils/helpers';
 import type { Habit } from '../../types';
 
 interface CalendarHeatmapProps {
@@ -12,23 +12,44 @@ const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({ habits, days = 365 })
   const start = subDays(today, days - 1);
   const allDates = getDaysInRange(start, today);
 
-  const getColor = (date: string): string => {
-    const goodCompleted = habits.filter((h) => h.type === 'good' && getHabitRecord(h, date)?.completed).length;
-    const goodTotal = habits.filter((h) => h.type === 'good' && h.startDate <= date).length;
-    const badPerformed = habits.filter((h) => h.type === 'bad' && getHabitRecord(h, date)?.completed).length;
+  const getDayInfo = (date: string) => {
+    const goodScheduled = habits.filter((h) => h.type === 'good' && isDateScheduled(h, date));
+    const goodCompleted = goodScheduled.filter((h) => getHabitRecord(h, date)?.completed).length;
+    const badScheduled = habits.filter((h) => h.type === 'bad' && isDateScheduled(h, date));
+    const badPerformed = badScheduled.filter((h) => getHabitRecord(h, date)?.completed).length;
+
+    let color = 'bg-slate-100 dark:bg-slate-800/40';
+    let label = 'No habits scheduled';
 
     if (badPerformed > 0) {
-      return 'bg-red-500';
+      color = 'bg-rose-500 shadow-xs shadow-rose-500/20';
+      label = `${badPerformed} bad habit slip(s)`;
+    } else if (goodScheduled.length > 0) {
+      const ratio = goodCompleted / goodScheduled.length;
+      if (ratio === 0) {
+        if (date < today) {
+          color = 'bg-rose-500/20 dark:bg-rose-950/40 border border-rose-500/30';
+          label = `0/${goodScheduled.length} completed (Missed)`;
+        } else {
+          color = 'bg-amber-500/25 dark:bg-amber-950/40 border border-amber-500/35';
+          label = `Pending today (${goodScheduled.length} scheduled)`;
+        }
+      } else if (ratio < 0.4) {
+        color = 'bg-emerald-200 dark:bg-emerald-950/60 border border-emerald-500/20';
+        label = `${goodCompleted}/${goodScheduled.length} completed`;
+      } else if (ratio < 0.75) {
+        color = 'bg-emerald-300 dark:bg-emerald-800/60';
+        label = `${goodCompleted}/${goodScheduled.length} completed`;
+      } else if (ratio < 1) {
+        color = 'bg-emerald-400 dark:bg-emerald-600';
+        label = `${goodCompleted}/${goodScheduled.length} completed`;
+      } else {
+        color = 'bg-emerald-500 shadow-xs shadow-emerald-500/20';
+        label = `All ${goodScheduled.length} completed`;
+      }
     }
-    if (goodTotal === 0) {
-      return 'bg-slate-200 dark:bg-slate-700';
-    }
-    const ratio = goodCompleted / goodTotal;
-    if (ratio === 0) return 'bg-slate-200 dark:bg-slate-700';
-    if (ratio < 0.25) return 'bg-green-200 dark:bg-green-900/30';
-    if (ratio < 0.5) return 'bg-green-300 dark:bg-green-800/50';
-    if (ratio < 0.75) return 'bg-green-400 dark:bg-green-600/60';
-    return 'bg-green-500 dark:bg-green-500';
+
+    return { color, label };
   };
 
   const weeks: string[][] = [];
@@ -46,38 +67,57 @@ const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({ habits, days = 365 })
   const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="flex gap-1 min-w-max">
-        <div className="flex flex-col gap-1 mr-2">
+    <div className="w-full overflow-x-auto scrollbar-hide py-1">
+      <div className="flex gap-1.5 min-w-max">
+        <div className="flex flex-col gap-1.5 mr-2">
           {dayLabels.map((d, i) => (
-            <div key={i} className="w-3 h-3 text-[10px] text-slate-400 dark:text-slate-500 flex items-center justify-center">
+            <div key={i} className="w-3.5 h-3.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center justify-center">
               {i % 2 === 0 ? d : ''}
             </div>
           ))}
         </div>
         {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-1">
-            {week.map((date) => (
-              <div
-                key={date}
-                title={date}
-                className={`w-3 h-3 rounded-sm ${getColor(date)} transition-colors hover:ring-2 hover:ring-slate-400 dark:hover:ring-slate-500`}
-              />
-            ))}
+          <div key={wi} className="flex flex-col gap-1.5">
+            {week.map((date) => {
+              const { color, label } = getDayInfo(date);
+              return (
+                <div
+                  key={date}
+                  title={`${date}: ${label}`}
+                  aria-label={`${date}: ${label}`}
+                  className={`w-3.5 h-3.5 rounded-xs ${color} transition-transform hover:scale-125 cursor-pointer`}
+                />
+              );
+            })}
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-2 mt-3 text-xs text-slate-500 dark:text-slate-400">
-        <span>Less</span>
-        <div className="flex gap-1">
-          <div className="w-3 h-3 rounded-sm bg-slate-200 dark:bg-slate-700" />
-          <div className="w-3 h-3 rounded-sm bg-green-200 dark:bg-green-900/30" />
-          <div className="w-3 h-3 rounded-sm bg-green-300 dark:bg-green-800/50" />
-          <div className="w-3 h-3 rounded-sm bg-green-400 dark:bg-green-600/60" />
-          <div className="w-3 h-3 rounded-sm bg-green-500 dark:bg-green-500" />
-          <div className="w-3 h-3 rounded-sm bg-red-500" />
+      <div className="flex flex-wrap items-center gap-4 mt-3.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+        <div className="flex items-center gap-1.5">
+          <span>Less</span>
+          <div className="flex gap-1.5 items-center">
+            <div className="w-3 h-3 rounded-xs bg-slate-100 dark:bg-slate-800" title="Unscheduled / None" />
+            <div className="w-3 h-3 rounded-xs bg-emerald-200 dark:bg-emerald-950/60" title="Partial" />
+            <div className="w-3 h-3 rounded-xs bg-emerald-300 dark:bg-emerald-800/60" />
+            <div className="w-3 h-3 rounded-xs bg-emerald-400 dark:bg-emerald-600" />
+            <div className="w-3 h-3 rounded-xs bg-emerald-500" title="Complete" />
+          </div>
+          <span>More</span>
         </div>
-        <span>More / Bad</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-xs bg-rose-500/20 border border-rose-500/30" />
+            <span>Missed Day</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-xs bg-amber-500/25 border border-amber-500/35" />
+            <span>Pending Today</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-xs bg-rose-500" />
+            <span>Bad Habit Slip</span>
+          </div>
+        </div>
       </div>
     </div>
   );

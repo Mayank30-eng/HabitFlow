@@ -77,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(data.token);
     setTokenState(data.token);
     setUser(data.user);
+    sessionStorage.setItem('habitflow_just_logged_in', 'true');
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
@@ -84,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(data.token);
     setTokenState(data.token);
     setUser(data.user);
+    sessionStorage.setItem('habitflow_just_logged_in', 'true');
   }, []);
 
   const logout = useCallback(async () => {
@@ -92,6 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Ignore error on logout call
     } finally {
+      sessionStorage.removeItem('habitflow_just_logged_in');
       handleUnauthorized();
     }
   }, [handleUnauthorized]);

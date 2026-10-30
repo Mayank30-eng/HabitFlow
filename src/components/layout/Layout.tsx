@@ -10,36 +10,22 @@ import LoadingSkeleton from '../common/LoadingSkeleton';
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/habits', label: 'Habits', icon: ListChecks },
-  { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { path: '/analytics', label: 'Insights', icon: BarChart3 },
   { path: '/calendar', label: 'Calendar', icon: CalendarDays },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
 const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
-    return localStorage.getItem('habitflow_sidebar_collapsed') === 'true';
-  });
   const { state } = useHabits();
   const location = useLocation();
 
-  const toggleSidebarCollapsed = () => {
-    setIsSidebarCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem('habitflow_sidebar_collapsed', String(next));
-      return next;
-    });
-  };
-
   return (
     <div className="min-h-[100dvh] bg-bg-light dark:bg-bg-dark text-slate-900 dark:text-slate-100 flex transition-colors">
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar (Fixed-width icon-only) */}
       <div className="hidden lg:block flex-shrink-0">
         <div className="sticky top-0 h-screen overflow-y-auto scrollbar-hide">
-          <Sidebar
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={toggleSidebarCollapsed}
-          />
+          <Sidebar />
         </div>
       </div>
 
@@ -56,9 +42,9 @@ const Layout: React.FC = () => {
               aria-hidden="true"
             />
             <motion.div
-              initial={{ x: -264 }}
+              initial={{ x: -80 }}
               animate={{ x: 0 }}
-              exit={{ x: -264 }}
+              exit={{ x: -80 }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
               className="fixed left-0 top-0 h-full z-50 lg:hidden"
             >

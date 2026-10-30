@@ -89,7 +89,7 @@ export const authApi = {
 };
 
 export const api = {
-  getState: () => request<PersistedAppState>('/state'),
+  getState: (days?: number) => request<PersistedAppState>(days ? `/state?days=${days}` : '/state'),
 
   createHabit: (data: HabitFormData) => request<{ state: PersistedAppState }>('/habits', {
     method: 'POST',

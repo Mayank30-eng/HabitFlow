@@ -12,12 +12,15 @@ import {
   toggleHabit,
   reorderHabits,
   resetAllData,
+  importHabits,
 } from '../services/habit.service.js';
 import { validateHabitInput } from '../validators/habit.validator.js';
 
 /** GET /api/state */
 export const getState = async (req, res) => {
-  res.json(await buildState(req.user));
+  const parsedDays = req.query.days ? parseInt(req.query.days, 10) : 7;
+  const days = Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : 7;
+  res.json(await buildState(req.user, { days }));
 };
 
 /** POST /api/habits */
@@ -31,7 +34,7 @@ export const create = async (req, res) => {
   }
 
   const appId = await createHabit(req.user._id, validation.data);
-  const state = await buildState(req.user);
+  const state = await buildState(req.user, { skipCache: true });
   res
     .status(201)
     .json({ habit: state.habits.find((h) => h.id === appId), state });
@@ -53,7 +56,7 @@ export const update = async (req, res) => {
     return;
   }
 
-  const state = await buildState(req.user);
+  const state = await buildState(req.user, { skipCache: true, updatedHabitId: req.params.id });
   res.json({ habit: state.habits.find((h) => h.id === req.params.id), state });
 };
 
@@ -64,7 +67,7 @@ export const remove = async (req, res) => {
     res.status(404).json({ error: 'Not found', message: 'Habit not found.' });
     return;
   }
-  res.json({ state: await buildState(req.user) });
+  res.json({ state: await buildState(req.user, { skipCache: true }) });
 };
 
 /** POST /api/habits/:id/toggle */
@@ -83,7 +86,7 @@ export const toggle = async (req, res) => {
     return;
   }
 
-  res.json({ state: await buildState(req.user) });
+  res.json({ state: await buildState(req.user, { skipCache: true, updatedHabitId: req.params.id }) });
 };
 
 /** PUT /api/habits/reorder */
@@ -105,11 +108,21 @@ export const reorder = async (req, res) => {
   }
 
   await reorderHabits(req.user._id, habits);
-  res.json({ state: await buildState(req.user) });
+  res.json({ state: await buildState(req.user, { skipCache: true }) });
 };
 
 /** DELETE /api/data */
 export const resetData = async (req, res) => {
   await resetAllData(req.user._id);
-  res.json({ state: await buildState(req.user) });
+  res.json({ state: await buildState(req.user, { skipCache: true }) });
+};
+
+/** POST /api/import */
+export const importData = async (req, res) => {
+  const habits = Array.isArray(req.body?.habits) ? req.body.habits : [];
+  const replace = Boolean(req.body?.replace);
+  await importHabits(req.user._id, habits, replace);
+  res
+    .status(201)
+    .json({ count: habits.length, state: await buildState(req.user, { skipCache: true }) });
 };

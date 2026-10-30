@@ -1,5 +1,5 @@
-import React from 'react';
-import { getToday, subDays, getDaysInRange, getHabitRecord, isDateScheduled } from '../../utils/helpers';
+import React, { useMemo } from 'react';
+import { getToday, subDays, getDaysInRange, isDateScheduled } from '../../utils/helpers';
 import type { Habit } from '../../types';
 
 interface CalendarHeatmapProps {
@@ -9,60 +9,101 @@ interface CalendarHeatmapProps {
 
 const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({ habits, days = 365 }) => {
   const today = getToday();
-  const start = subDays(today, days - 1);
-  const allDates = getDaysInRange(start, today);
 
-  const getDayInfo = (date: string) => {
-    const goodScheduled = habits.filter((h) => h.type === 'good' && isDateScheduled(h, date));
-    const goodCompleted = goodScheduled.filter((h) => getHabitRecord(h, date)?.completed).length;
-    const badScheduled = habits.filter((h) => h.type === 'bad' && isDateScheduled(h, date));
-    const badPerformed = badScheduled.filter((h) => getHabitRecord(h, date)?.completed).length;
+  // Compute date range once when days or today changes
+  const allDates = useMemo(() => {
+    const start = subDays(today, days - 1);
+    return getDaysInRange(start, today);
+  }, [days, today]);
 
-    let color = 'bg-slate-100 dark:bg-slate-800/40';
-    let label = 'No habits scheduled';
-
-    if (badPerformed > 0) {
-      color = 'bg-rose-500 shadow-xs shadow-rose-500/20';
-      label = `${badPerformed} bad habit slip(s)`;
-    } else if (goodScheduled.length > 0) {
-      const ratio = goodCompleted / goodScheduled.length;
-      if (ratio === 0) {
-        if (date < today) {
-          color = 'bg-rose-500/20 dark:bg-rose-950/40 border border-rose-500/30';
-          label = `0/${goodScheduled.length} completed (Missed)`;
-        } else {
-          color = 'bg-amber-500/25 dark:bg-amber-950/40 border border-amber-500/35';
-          label = `Pending today (${goodScheduled.length} scheduled)`;
-        }
-      } else if (ratio < 0.4) {
-        color = 'bg-emerald-200 dark:bg-emerald-950/60 border border-emerald-500/20';
-        label = `${goodCompleted}/${goodScheduled.length} completed`;
-      } else if (ratio < 0.75) {
-        color = 'bg-emerald-300 dark:bg-emerald-800/60';
-        label = `${goodCompleted}/${goodScheduled.length} completed`;
-      } else if (ratio < 1) {
-        color = 'bg-emerald-400 dark:bg-emerald-600';
-        label = `${goodCompleted}/${goodScheduled.length} completed`;
-      } else {
-        color = 'bg-emerald-500 shadow-xs shadow-emerald-500/20';
-        label = `All ${goodScheduled.length} completed`;
+  // Pre-index each habit's completed dates in a Set for O(1) lookup
+  const habitLookups = useMemo(() => {
+    return habits.map((h) => {
+      const completedSet = new Set<string>();
+      for (const record of h.history) {
+        if (record.completed) completedSet.add(record.date);
       }
+      return {
+        habit: h,
+        type: h.type,
+        completedSet,
+      };
+    });
+  }, [habits]);
+
+  // Pre-compute visual status for every date in a single pass without array allocations
+  const dayInfoMap = useMemo(() => {
+    const map = new Map<string, { color: string; label: string }>();
+
+    for (const date of allDates) {
+      let goodScheduled = 0;
+      let goodCompleted = 0;
+      let badPerformed = 0;
+
+      for (const item of habitLookups) {
+        if (isDateScheduled(item.habit, date)) {
+          const isDone = item.completedSet.has(date);
+          if (item.type === 'good') {
+            goodScheduled += 1;
+            if (isDone) goodCompleted += 1;
+          } else if (item.type === 'bad') {
+            if (isDone) badPerformed += 1;
+          }
+        }
+      }
+
+      let color = 'bg-slate-100 dark:bg-slate-800/40';
+      let label = 'No habits scheduled';
+
+      if (badPerformed > 0) {
+        color = 'bg-rose-500 shadow-xs shadow-rose-500/20';
+        label = `${badPerformed} bad habit slip(s)`;
+      } else if (goodScheduled > 0) {
+        const ratio = goodCompleted / goodScheduled;
+        if (ratio === 0) {
+          if (date < today) {
+            color = 'bg-rose-500/20 dark:bg-rose-950/40 border border-rose-500/30';
+            label = `0/${goodScheduled} completed (Missed)`;
+          } else {
+            color = 'bg-amber-500/25 dark:bg-amber-950/40 border border-amber-500/35';
+            label = `Pending today (${goodScheduled} scheduled)`;
+          }
+        } else if (ratio < 0.4) {
+          color = 'bg-emerald-200 dark:bg-emerald-950/60 border border-emerald-500/20';
+          label = `${goodCompleted}/${goodScheduled} completed`;
+        } else if (ratio < 0.75) {
+          color = 'bg-emerald-300 dark:bg-emerald-800/60';
+          label = `${goodCompleted}/${goodScheduled} completed`;
+        } else if (ratio < 1) {
+          color = 'bg-emerald-400 dark:bg-emerald-600';
+          label = `${goodCompleted}/${goodScheduled} completed`;
+        } else {
+          color = 'bg-emerald-500 shadow-xs shadow-emerald-500/20';
+          label = `All ${goodScheduled} completed`;
+        }
+      }
+
+      map.set(date, { color, label });
     }
 
-    return { color, label };
-  };
+    return map;
+  }, [allDates, habitLookups, today]);
 
-  const weeks: string[][] = [];
-  let currentWeek: string[] = [];
-  allDates.forEach((date) => {
-    const dayOfWeek = new Date(date + 'T00:00:00').getDay();
-    if (dayOfWeek === 0 && currentWeek.length > 0) {
-      weeks.push(currentWeek);
-      currentWeek = [];
-    }
-    currentWeek.push(date);
-  });
-  if (currentWeek.length > 0) weeks.push(currentWeek);
+  // Partition dates into Sunday-aligned weeks (memoized)
+  const weeks = useMemo(() => {
+    const result: string[][] = [];
+    let currentWeek: string[] = [];
+    allDates.forEach((date) => {
+      const dayOfWeek = new Date(date + 'T00:00:00').getDay();
+      if (dayOfWeek === 0 && currentWeek.length > 0) {
+        result.push(currentWeek);
+        currentWeek = [];
+      }
+      currentWeek.push(date);
+    });
+    if (currentWeek.length > 0) result.push(currentWeek);
+    return result;
+  }, [allDates]);
 
   const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -79,13 +120,16 @@ const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({ habits, days = 365 })
         {weeks.map((week, wi) => (
           <div key={wi} className="flex flex-col gap-1.5">
             {week.map((date) => {
-              const { color, label } = getDayInfo(date);
+              const info = dayInfoMap.get(date) ?? {
+                color: 'bg-slate-100 dark:bg-slate-800/40',
+                label: 'No habits scheduled',
+              };
               return (
                 <div
                   key={date}
-                  title={`${date}: ${label}`}
-                  aria-label={`${date}: ${label}`}
-                  className={`w-3.5 h-3.5 rounded-xs ${color} transition-transform hover:scale-125 cursor-pointer`}
+                  title={`${date}: ${info.label}`}
+                  aria-label={`${date}: ${info.label}`}
+                  className={`w-3.5 h-3.5 rounded-xs ${info.color} transition-transform hover:scale-125 cursor-pointer`}
                 />
               );
             })}

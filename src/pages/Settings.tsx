@@ -1,19 +1,26 @@
 import React, { useState } from 'react';
 import {
-  Sun, Moon, Download, Trash2, Database, Layers, CheckCircle2, Shield, Info, ChevronRight
+  Sun, Moon, Download, Trash2, Database, Layers, CheckCircle2, Shield, Info, ChevronRight, User, Sparkles
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useHabits } from '../contexts/HabitContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useAvatar } from '../contexts/AvatarContext';
 import { useToast } from '../contexts/ToastContext';
 import { exportData } from '../utils/storage';
 import { formatDate } from '../utils/helpers';
 import ConfirmModal from '../components/modals/ConfirmModal';
+import UserAvatar from '../components/common/UserAvatar';
+import AvatarModal from '../components/modals/AvatarModal';
 
 const Settings: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { state, resetData } = useHabits();
+  const { user } = useAuth();
+  const { avatarId } = useAvatar();
   const { showToast } = useToast();
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
   const handleExport = () => {
     const data = exportData(state.habits);
@@ -51,6 +58,53 @@ const Settings: React.FC = () => {
           Customize interface appearance, manage data backups, and inspect app metrics
         </p>
       </div>
+
+      {/* Account & Profile Avatar Section */}
+      {user && (
+        <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary dark:text-primary-light border border-primary/20">
+              <User className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                Profile & Avatar
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Manage your authenticated identity and active avatar
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-elevated-dark border border-slate-200/70 dark:border-slate-800/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-primary/30 p-0.5 bg-white dark:bg-slate-800 shadow-xs shrink-0">
+                <UserAvatar avatarId={avatarId} userName={user.name} size="xl" className="w-full h-full" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                  {user.name}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {user.email}
+                </p>
+                <span className="inline-block mt-1 text-[10px] bg-primary/10 text-primary dark:text-primary-light font-bold px-2 py-0.5 rounded-full">
+                  Authenticated User
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setAvatarModalOpen(true)}
+              type="button"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary hover:bg-primary-hover text-white shadow-xs hover:shadow transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Change Avatar</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Appearance Section */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 shadow-xs space-y-4">
@@ -260,6 +314,12 @@ const Settings: React.FC = () => {
         message="This will permanently delete all your habits and tracking history. This action cannot be undone."
         confirmText="Reset Everything"
         variant="danger"
+      />
+
+      {/* Avatar Customization Modal */}
+      <AvatarModal
+        isOpen={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
       />
     </div>
   );

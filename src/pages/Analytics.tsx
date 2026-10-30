@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, BarChart3, PieChart as PieChartIcon, Calendar, Shield, Activity } from 'lucide-react';
 import { useHabits } from '../contexts/HabitContext';
 import CalendarHeatmap from '../components/common/CalendarHeatmap';
@@ -9,10 +9,18 @@ import {
 } from 'recharts';
 
 const Analytics: React.FC = () => {
-  const { state } = useHabits();
+  const { state, refreshData } = useHabits();
   const [timeRange, setTimeRange] = useState<'7' | '30' | '90'>('30');
   const habits = state.habits;
   const analytics = state.analytics;
+
+  useEffect(() => {
+    const days = parseInt(timeRange, 10);
+    const currentTrendLen = state.analytics?.trends?.completion?.length ?? 0;
+    if (days > currentTrendLen) {
+      void refreshData(days);
+    }
+  }, [timeRange, refreshData, state.analytics?.trends?.completion?.length]);
 
   // All trend/chart data now comes from backend analytics.
   // For the time range selector, the backend always sends 30-day trends.

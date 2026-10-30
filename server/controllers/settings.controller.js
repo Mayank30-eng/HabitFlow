@@ -3,7 +3,7 @@
  */
 
 import Settings from '../models/Settings.js';
-import { ensureSettings } from '../services/habit.service.js';
+import { ensureSettings, invalidateUserCache } from '../services/habit.service.js';
 
 /** GET /api/settings */
 export const getSettings = async (req, res) => {
@@ -21,6 +21,7 @@ export const updateSettings = async (req, res) => {
     return;
   }
 
+  invalidateUserCache(req.user._id);
   const settings = await Settings.findOneAndUpdate(
     { userId: req.user._id },
     { theme },

@@ -19,7 +19,7 @@ import {
  * Build a Map<date, record> from a habit's history array for O(1) lookups.
  * Avoids repeated O(n) .find() inside loops.
  */
-const buildHistoryMap = (history) => {
+export const buildHistoryMap = (history) => {
   const map = new Map();
   for (const record of history) {
     map.set(record.date, record);
@@ -76,11 +76,11 @@ export const isDateScheduled = (habit, date) => {
  * For good habits, if today is scheduled but not yet recorded, skip to yesterday
  * (don't break the streak for an incomplete today).
  */
-export const calculateStreak = (habit) => {
+export const calculateStreak = (habit, precomputedMap = null) => {
   const today = getToday();
   if (habit.startDate > today) return 0;
 
-  const historyMap = buildHistoryMap(habit.history);
+  const historyMap = precomputedMap || buildHistoryMap(habit.history);
   let streak = 0;
   let current = today;
 
@@ -114,9 +114,9 @@ export const calculateStreak = (habit) => {
 };
 
 /** Longest streak — max consecutive scheduled successes in all history. */
-export const calculateLongestStreak = (habit) => {
-  const range = getScheduledDates(habit, habit.startDate, getToday());
-  const historyMap = buildHistoryMap(habit.history);
+export const calculateLongestStreak = (habit, precomputedMap = null, precomputedRange = null) => {
+  const range = precomputedRange || getScheduledDates(habit, habit.startDate, getToday());
+  const historyMap = precomputedMap || buildHistoryMap(habit.history);
   let maxStreak = 0;
   let currentStreak = 0;
 
@@ -133,11 +133,11 @@ export const calculateLongestStreak = (habit) => {
 };
 
 /** Success rate over the last N days (only counting scheduled elapsed days + today if completed). */
-export const calculateSuccessRate = (habit, days = 30) => {
+export const calculateSuccessRate = (habit, days = 30, precomputedMap = null) => {
   const today = getToday();
   const range = getScheduledDates(habit, subDays(today, days - 1), today);
   if (range.length === 0) return 0;
-  const historyMap = buildHistoryMap(habit.history);
+  const historyMap = precomputedMap || buildHistoryMap(habit.history);
 
   let eligibleDenominator = 0;
   let successes = 0;
@@ -171,9 +171,9 @@ export const calculateSuccessRate = (habit, days = 30) => {
 };
 
 /** Total successes across all scheduled days since startDate. */
-export const calculateTotalSuccesses = (habit) => {
-  const range = getScheduledDates(habit, habit.startDate, getToday());
-  const historyMap = buildHistoryMap(habit.history);
+export const calculateTotalSuccesses = (habit, precomputedMap = null, precomputedRange = null) => {
+  const range = precomputedRange || getScheduledDates(habit, habit.startDate, getToday());
+  const historyMap = precomputedMap || buildHistoryMap(habit.history);
   return range.filter((date) => isHabitSuccessOnDate(habit, date, historyMap)).length;
 };
 
@@ -190,11 +190,11 @@ export const calculateTimesPerformed = (habit) => {
  * Relapse count — number of times a bad habit broke an avoidance streak.
  * Uses scheduled dates only.
  */
-export const calculateRelapseCount = (habit) => {
+export const calculateRelapseCount = (habit, precomputedMap = null, precomputedRange = null) => {
   if (habit.type === 'good') return 0;
 
-  const range = getScheduledDates(habit, habit.startDate, getToday());
-  const historyMap = buildHistoryMap(habit.history);
+  const range = precomputedRange || getScheduledDates(habit, habit.startDate, getToday());
+  const historyMap = precomputedMap || buildHistoryMap(habit.history);
   let relapses = 0;
   let wasAvoiding = true;
 
@@ -212,42 +212,45 @@ export const calculateRelapseCount = (habit) => {
 };
 
 /** Bad habit occurrences in the last N days (scheduled days only). */
-export const calculateOccurrencesInPeriod = (habit, days) => {
+export const calculateOccurrencesInPeriod = (habit, days, precomputedMap = null) => {
   if (habit.type === 'good') return 0;
   const today = getToday();
   const range = getScheduledDates(habit, subDays(today, days - 1), today);
-  const historyMap = buildHistoryMap(habit.history);
+  const historyMap = precomputedMap || buildHistoryMap(habit.history);
   return range.filter((date) => isBadHabitOccurrenceOnDate(habit, date, historyMap)).length;
 };
 
 /** Penalty impact — % of scheduled days the bad habit was performed (last N days). */
-export const calculateBadHabitPenaltyImpact = (habit, days = 30) => {
+export const calculateBadHabitPenaltyImpact = (habit, days = 30, precomputedMap = null) => {
   if (habit.type === 'good') return 0;
   const today = getToday();
   const range = getScheduledDates(habit, subDays(today, days - 1), today);
   if (range.length === 0) return 0;
-  const historyMap = buildHistoryMap(habit.history);
+  const historyMap = precomputedMap || buildHistoryMap(habit.history);
   const occurrences = range.filter((date) => isBadHabitOccurrenceOnDate(habit, date, historyMap)).length;
   return Math.round((occurrences / range.length) * 100);
 };
 
 // ─── Aggregated Metrics ─────────────────────────────────────────────────────
 
-/** Derive per-habit metrics object. */
-export const deriveHabitMetrics = (habit) => {
-  const current = calculateStreak(habit);
-  const longest = calculateLongestStreak(habit);
+/** Derive per-habit metrics object, reusing historyMap and scheduled ranges. */
+export const deriveHabitMetrics = (habit, precomputedMap = null) => {
+  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const fullScheduled = getScheduledDates(habit, habit.startDate, getToday());
+
+  const current = calculateStreak(habit, historyMap);
+  const longest = calculateLongestStreak(habit, historyMap, fullScheduled);
 
   return {
     currentStreak: habit.type === 'good' ? current : 0,
     longestStreak: habit.type === 'good' ? longest : 0,
     avoidanceStreak: habit.type === 'bad' ? current : 0,
     longestAvoidanceStreak: habit.type === 'bad' ? longest : 0,
-    successRate: calculateSuccessRate(habit),
-    totalSuccesses: calculateTotalSuccesses(habit),
+    successRate: calculateSuccessRate(habit, 30, historyMap),
+    totalSuccesses: calculateTotalSuccesses(habit, historyMap, fullScheduled),
     occurrences: calculateTimesPerformed(habit),
-    relapseCount: calculateRelapseCount(habit),
-    penaltyImpact: calculateBadHabitPenaltyImpact(habit),
+    relapseCount: calculateRelapseCount(habit, historyMap, fullScheduled),
+    penaltyImpact: calculateBadHabitPenaltyImpact(habit, 30, historyMap),
   };
 };
 
@@ -383,9 +386,9 @@ export const getBadHabitTrend = (habits, days = 30) => {
 };
 
 /** Per-habit success trend over the last N days (frequency-aware). */
-export const getHabitSuccessTrend = (habit, days = 30) => {
+export const getHabitSuccessTrend = (habit, days = 30, precomputedMap = null) => {
   const today = getToday();
-  const historyMap = buildHistoryMap(habit.history);
+  const historyMap = precomputedMap || buildHistoryMap(habit.history);
   const result = [];
   for (let i = days - 1; i >= 0; i--) {
     const date = subDays(today, i);
@@ -632,13 +635,14 @@ export const calculateDailyCompletionRate = (habits, date) => {
   return Math.round((completed / goodHabits.length) * 100);
 };
 
-/** Impact score for a habit. */
-export const getHabitImpactScore = (habit, allHabits) => {
+/** Impact score for a habit (reuses precomputed metrics when provided). */
+export const getHabitImpactScore = (habit, allHabits, metrics = null) => {
   if (allHabits.length === 0) return 0;
-  const rate = calculateSuccessRate(habit, 30);
-  const streak = calculateStreak(habit);
-  const longest = calculateLongestStreak(habit);
-  const successes = calculateTotalSuccesses(habit);
+  const m = metrics || deriveHabitMetrics(habit);
+  const rate = m.successRate;
+  const streak = habit.type === 'good' ? m.currentStreak : m.avoidanceStreak;
+  const longest = habit.type === 'good' ? m.longestStreak : m.longestAvoidanceStreak;
+  const successes = m.totalSuccesses;
   const totalDays = getScheduledDates(habit, habit.startDate, getToday()).length;
   const consistency = totalDays > 0 ? successes / totalDays : 0;
   const streakBonus = Math.min(streak / 10, 1);

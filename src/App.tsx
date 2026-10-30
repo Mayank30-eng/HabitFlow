@@ -1,6 +1,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { AvatarProvider } from './contexts/AvatarContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { HabitProvider } from './contexts/HabitContext';
@@ -18,28 +19,30 @@ import Settings from './pages/Settings';
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <ToastProvider>
-          <HabitProvider>
-            <HashRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<Layout />}>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/habits" element={<AllHabits />} />
-                    <Route path="/habit/:id" element={<HabitDetails />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/calendar" element={<CalendarView />} />
-                    <Route path="/settings" element={<Settings />} />
+      <AvatarProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <HabitProvider>
+              <HashRouter>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route element={<ProtectedRoute />}>
+                    <Route element={<Layout />}>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/habits" element={<AllHabits />} />
+                      <Route path="/habit/:id" element={<HabitDetails />} />
+                      <Route path="/analytics" element={<Analytics />} />
+                      <Route path="/calendar" element={<CalendarView />} />
+                      <Route path="/settings" element={<Settings />} />
+                    </Route>
                   </Route>
-                </Route>
-              </Routes>
-            </HashRouter>
-          </HabitProvider>
-        </ToastProvider>
-      </ThemeProvider>
+                </Routes>
+              </HashRouter>
+            </HabitProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </AvatarProvider>
     </AuthProvider>
   );
 }

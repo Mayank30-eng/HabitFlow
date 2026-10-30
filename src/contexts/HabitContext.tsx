@@ -74,7 +74,7 @@ const habitReducer = (state: HabitState, action: HabitAction): HabitState => {
 
 interface HabitContextType {
   state: HabitState;
-  refreshData: () => Promise<void>;
+  refreshData: (days?: number) => Promise<void>;
   addHabit: (data: HabitFormData) => Promise<void>;
   updateHabit: (id: string, data: HabitFormData) => Promise<void>;
   deleteHabit: (id: string) => Promise<void>;
@@ -103,14 +103,14 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     settings: { theme: 'light' },
   });
 
-  const loadState = useCallback(async () => {
+  const loadState = useCallback(async (days?: number) => {
     if (!getToken()) {
       dispatch({ type: 'SET_LOADING', payload: false });
       return;
     }
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      let appState = await api.getState();
+      let appState = await api.getState(days);
       const legacyHabits = loadLegacyHabits();
 
       if (

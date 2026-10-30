@@ -18,5 +18,8 @@ const habitSchema = new mongoose.Schema(
 );
 
 habitSchema.index({ userId: 1, appId: 1 }, { unique: true });
+habitSchema.index({ userId: 1, order: 1, createdAt: 1 });
+habitSchema.index({ userId: 1, startDate: 1 });
+habitSchema.index({ userId: 1, createdAtDate: 1 });
 
 export default mongoose.model('Habit', habitSchema);

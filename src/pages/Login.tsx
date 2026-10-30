@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Logo from '../components/common/Logo';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -46,8 +47,8 @@ const Login: React.FC = () => {
         className="w-full max-w-md bg-surface-light dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-7 sm:p-9 shadow-xl relative overflow-hidden"
       >
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-indigo-500 flex items-center justify-center mb-3 shadow-md shadow-primary/25">
-            <Flame className="w-7 h-7 text-white" />
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 p-2 flex items-center justify-center mb-3 shadow-md shadow-emerald-500/10 border border-emerald-500/20">
+            <Logo className="w-full h-full" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">
             Welcome Back

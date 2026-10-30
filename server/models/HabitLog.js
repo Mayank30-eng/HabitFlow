@@ -11,5 +11,7 @@ const habitLogSchema = new mongoose.Schema(
 );
 
 habitLogSchema.index({ userId: 1, habitAppId: 1, date: 1 }, { unique: true });
+habitLogSchema.index({ userId: 1, date: 1 });
+habitLogSchema.index({ habitAppId: 1, date: 1 });
 
 export default mongoose.model('HabitLog', habitLogSchema);

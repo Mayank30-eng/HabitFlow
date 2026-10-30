@@ -29,6 +29,9 @@ router.delete('/habits/:id', asyncHandler(habitCtrl.remove));
 // POST /api/habits/:id/toggle — toggle completion
 router.post('/habits/:id/toggle', asyncHandler(habitCtrl.toggle));
 
+// POST /api/import — import habits
+router.post('/import', asyncHandler(habitCtrl.importData));
+
 // DELETE /api/data — reset all user data
 router.delete('/data', asyncHandler(habitCtrl.resetData));
 

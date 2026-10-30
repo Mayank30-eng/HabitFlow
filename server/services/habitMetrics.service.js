@@ -80,7 +80,10 @@ export const calculateStreak = (habit, precomputedMap = null) => {
   const today = getToday();
   if (habit.startDate > today) return 0;
 
-  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const historyMap =
+    precomputedMap && typeof precomputedMap.get === 'function'
+      ? precomputedMap
+      : buildHistoryMap(habit.history);
   let streak = 0;
   let current = today;
 
@@ -115,8 +118,14 @@ export const calculateStreak = (habit, precomputedMap = null) => {
 
 /** Longest streak — max consecutive scheduled successes in all history. */
 export const calculateLongestStreak = (habit, precomputedMap = null, precomputedRange = null) => {
-  const range = precomputedRange || getScheduledDates(habit, habit.startDate, getToday());
-  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const range =
+    Array.isArray(precomputedRange) && precomputedRange.length > 0
+      ? precomputedRange
+      : getScheduledDates(habit, habit.startDate, getToday());
+  const historyMap =
+    precomputedMap && typeof precomputedMap.get === 'function'
+      ? precomputedMap
+      : buildHistoryMap(habit.history);
   let maxStreak = 0;
   let currentStreak = 0;
 
@@ -135,9 +144,13 @@ export const calculateLongestStreak = (habit, precomputedMap = null, precomputed
 /** Success rate over the last N days (only counting scheduled elapsed days + today if completed). */
 export const calculateSuccessRate = (habit, days = 30, precomputedMap = null) => {
   const today = getToday();
-  const range = getScheduledDates(habit, subDays(today, days - 1), today);
+  const validDays = Number.isInteger(days) && days > 0 ? days : 30;
+  const range = getScheduledDates(habit, subDays(today, validDays - 1), today);
   if (range.length === 0) return 0;
-  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const historyMap =
+    precomputedMap && typeof precomputedMap.get === 'function'
+      ? precomputedMap
+      : buildHistoryMap(habit.history);
 
   let eligibleDenominator = 0;
   let successes = 0;
@@ -172,8 +185,14 @@ export const calculateSuccessRate = (habit, days = 30, precomputedMap = null) =>
 
 /** Total successes across all scheduled days since startDate. */
 export const calculateTotalSuccesses = (habit, precomputedMap = null, precomputedRange = null) => {
-  const range = precomputedRange || getScheduledDates(habit, habit.startDate, getToday());
-  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const range =
+    Array.isArray(precomputedRange) && precomputedRange.length > 0
+      ? precomputedRange
+      : getScheduledDates(habit, habit.startDate, getToday());
+  const historyMap =
+    precomputedMap && typeof precomputedMap.get === 'function'
+      ? precomputedMap
+      : buildHistoryMap(habit.history);
   return range.filter((date) => isHabitSuccessOnDate(habit, date, historyMap)).length;
 };
 
@@ -193,8 +212,14 @@ export const calculateTimesPerformed = (habit) => {
 export const calculateRelapseCount = (habit, precomputedMap = null, precomputedRange = null) => {
   if (habit.type === 'good') return 0;
 
-  const range = precomputedRange || getScheduledDates(habit, habit.startDate, getToday());
-  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const range =
+    Array.isArray(precomputedRange) && precomputedRange.length > 0
+      ? precomputedRange
+      : getScheduledDates(habit, habit.startDate, getToday());
+  const historyMap =
+    precomputedMap && typeof precomputedMap.get === 'function'
+      ? precomputedMap
+      : buildHistoryMap(habit.history);
   let relapses = 0;
   let wasAvoiding = true;
 
@@ -212,11 +237,15 @@ export const calculateRelapseCount = (habit, precomputedMap = null, precomputedR
 };
 
 /** Bad habit occurrences in the last N days (scheduled days only). */
-export const calculateOccurrencesInPeriod = (habit, days, precomputedMap = null) => {
+export const calculateOccurrencesInPeriod = (habit, days = 30, precomputedMap = null) => {
   if (habit.type === 'good') return 0;
   const today = getToday();
-  const range = getScheduledDates(habit, subDays(today, days - 1), today);
-  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const validDays = Number.isInteger(days) && days > 0 ? days : 30;
+  const range = getScheduledDates(habit, subDays(today, validDays - 1), today);
+  const historyMap =
+    precomputedMap && typeof precomputedMap.get === 'function'
+      ? precomputedMap
+      : buildHistoryMap(habit.history);
   return range.filter((date) => isBadHabitOccurrenceOnDate(habit, date, historyMap)).length;
 };
 
@@ -224,9 +253,13 @@ export const calculateOccurrencesInPeriod = (habit, days, precomputedMap = null)
 export const calculateBadHabitPenaltyImpact = (habit, days = 30, precomputedMap = null) => {
   if (habit.type === 'good') return 0;
   const today = getToday();
-  const range = getScheduledDates(habit, subDays(today, days - 1), today);
+  const validDays = Number.isInteger(days) && days > 0 ? days : 30;
+  const range = getScheduledDates(habit, subDays(today, validDays - 1), today);
   if (range.length === 0) return 0;
-  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const historyMap =
+    precomputedMap && typeof precomputedMap.get === 'function'
+      ? precomputedMap
+      : buildHistoryMap(habit.history);
   const occurrences = range.filter((date) => isBadHabitOccurrenceOnDate(habit, date, historyMap)).length;
   return Math.round((occurrences / range.length) * 100);
 };
@@ -235,7 +268,10 @@ export const calculateBadHabitPenaltyImpact = (habit, days = 30, precomputedMap 
 
 /** Derive per-habit metrics object, reusing historyMap and scheduled ranges. */
 export const deriveHabitMetrics = (habit, precomputedMap = null) => {
-  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const historyMap =
+    precomputedMap && typeof precomputedMap.get === 'function'
+      ? precomputedMap
+      : buildHistoryMap(habit.history);
   const fullScheduled = getScheduledDates(habit, habit.startDate, getToday());
 
   const current = calculateStreak(habit, historyMap);
@@ -309,8 +345,8 @@ export const deriveOverallAnalytics = (habits) => {
       completionRate: goodHabits.length === 0
         ? 0
         : Math.round(goodHabits.reduce((sum, h) => sum + calculateSuccessRate(h), 0) / goodHabits.length),
-      currentStreak: goodHabits.length === 0 ? 0 : Math.max(...goodHabits.map(calculateStreak)),
-      longestStreak: goodHabits.length === 0 ? 0 : Math.max(...goodHabits.map(calculateLongestStreak)),
+      currentStreak: goodHabits.length === 0 ? 0 : Math.max(0, ...goodHabits.map((h) => calculateStreak(h))),
+      longestStreak: goodHabits.length === 0 ? 0 : Math.max(0, ...goodHabits.map((h) => calculateLongestStreak(h))),
     },
     bad: {
       total: badHabits.length,
@@ -319,8 +355,8 @@ export const deriveOverallAnalytics = (habits) => {
       avoidanceRate: badHabits.length === 0
         ? 0
         : Math.round(badHabits.reduce((sum, h) => sum + calculateSuccessRate(h), 0) / badHabits.length),
-      bestAvoidanceStreak: badHabits.length === 0 ? 0 : Math.max(...badHabits.map(calculateStreak)),
-      longestAvoidanceStreak: badHabits.length === 0 ? 0 : Math.max(...badHabits.map(calculateLongestStreak)),
+      bestAvoidanceStreak: badHabits.length === 0 ? 0 : Math.max(0, ...badHabits.map((h) => calculateStreak(h))),
+      longestAvoidanceStreak: badHabits.length === 0 ? 0 : Math.max(0, ...badHabits.map((h) => calculateLongestStreak(h))),
       totalRelapses: badHabits.reduce((sum, h) => sum + calculateRelapseCount(h), 0),
       totalOccurrences: badHabits.reduce((sum, h) => sum + calculateTimesPerformed(h), 0),
       totalAvoidedDays: badHabits.reduce((sum, h) => sum + calculateTotalSuccesses(h), 0),
@@ -388,9 +424,13 @@ export const getBadHabitTrend = (habits, days = 30) => {
 /** Per-habit success trend over the last N days (frequency-aware). */
 export const getHabitSuccessTrend = (habit, days = 30, precomputedMap = null) => {
   const today = getToday();
-  const historyMap = precomputedMap || buildHistoryMap(habit.history);
+  const validDays = Number.isInteger(days) && days > 0 ? days : 30;
+  const historyMap =
+    precomputedMap && typeof precomputedMap.get === 'function'
+      ? precomputedMap
+      : buildHistoryMap(habit.history);
   const result = [];
-  for (let i = days - 1; i >= 0; i--) {
+  for (let i = validDays - 1; i >= 0; i--) {
     const date = subDays(today, i);
     const scheduled = isDateScheduled(habit, date) && habit.startDate <= date;
     const isToday = date === today;
@@ -659,8 +699,8 @@ export const getGoodHabitDashboardStats = (habits) => {
     return { completionRate: 0, currentStreak: 0, longestStreak: 0, completedToday: 0, totalGood: 0 };
   }
 
-  const currentStreak = Math.max(...goodHabits.map(calculateStreak));
-  const longestStreak = Math.max(...goodHabits.map(calculateLongestStreak));
+  const currentStreak = Math.max(0, ...goodHabits.map((h) => calculateStreak(h)));
+  const longestStreak = Math.max(0, ...goodHabits.map((h) => calculateLongestStreak(h)));
   const completedToday = goodHabits.filter((h) => {
     const historyMap = buildHistoryMap(h.history);
     return Boolean(historyMap.get(today)?.completed);
@@ -684,8 +724,8 @@ export const getBadHabitDashboardStats = (habits) => {
   }
 
   return {
-    bestAvoidanceStreak: Math.max(...badHabits.map(calculateStreak)),
-    longestAvoidanceStreak: Math.max(...badHabits.map(calculateLongestStreak)),
+    bestAvoidanceStreak: Math.max(0, ...badHabits.map((h) => calculateStreak(h))),
+    longestAvoidanceStreak: Math.max(0, ...badHabits.map((h) => calculateLongestStreak(h))),
     totalRelapses: badHabits.reduce((sum, h) => sum + calculateRelapseCount(h), 0),
     totalOccurrences: badHabits.reduce((sum, h) => sum + calculateTimesPerformed(h), 0),
     totalAvoidedDays: badHabits.reduce((sum, h) => sum + calculateTotalSuccesses(h), 0),

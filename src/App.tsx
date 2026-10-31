@@ -1,6 +1,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { AuthProvider } from './contexts/AuthContext';
 import { AvatarProvider } from './contexts/AvatarContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -41,6 +42,7 @@ function App() {
                 </Routes>
               </HashRouter>
               <VercelAnalytics />
+              <SpeedInsights />
             </HabitProvider>
           </ToastProvider>
         </ThemeProvider>
